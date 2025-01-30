@@ -22,6 +22,7 @@ def get_treatment_data():
     df = df.iloc[3:, [2, 5, 6, 7, 8, 9, 37, 38, 39, 40]]  # Extract relevant columns
     df.columns = ['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Relative Importance', 'Standardized Importance', 'Threshold Low', 'Threshold High', 'Estimate', 'Net Benefit']
     df.dropna(inplace=True)
+    df = df[df['Net Benefit'] >= 0]  # Ensure all values for the pie chart are non-negative
     return df
 
 # App UI
@@ -45,16 +46,22 @@ if st.sidebar.button("送信"):
 
     # Pie Chart Visualization of Treatment Effectiveness
     st.subheader("治療の有効性（1000人あたり）")
-    fig, ax = plt.subplots()
-    ax.pie(treatment_df['Net Benefit'], labels=treatment_df['Outcome'], autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    st.pyplot(fig)
+    if not treatment_df.empty:
+        fig, ax = plt.subplots()
+        ax.pie(treatment_df['Net Benefit'], labels=treatment_df['Outcome'], autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        st.pyplot(fig)
+    else:
+        st.write("データが不足しているため、円グラフを表示できません。")
     
     st.subheader("閾値分析")
     st.write("このセクションでは、治療効果が信頼できる範囲内にあるかどうかを強調します。")
     st.dataframe(treatment_df[['Outcome', 'Threshold Low', 'Threshold High']])
 
     st.subheader("最終推奨事項")
-    best_treatment = treatment_df.sort_values(by='Net Benefit', ascending=False).iloc[0]
-    st.write(f"計算結果に基づき、最も推奨される治療は **{best_treatment['Outcome']}** です。最終決定の前に医師に相談してください。")
+    if not treatment_df.empty:
+        best_treatment = treatment_df.sort_values(by='Net Benefit', ascending=False).iloc[0]
+        st.write(f"計算結果に基づき、最も推奨される治療は **{best_treatment['Outcome']}** です。最終決定の前に医師に相談してください。")
+    else:
+        st.write("適切なデータがないため、推奨治療を計算できません。")
     st.button("最初からやり直す")
