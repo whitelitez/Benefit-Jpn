@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Get the absolute path to the Excel file
 FILE_PATH = os.path.join(os.path.dirname(__file__), "net_benefit_rd_md_v0.97.xlsx")
@@ -42,6 +43,13 @@ if st.sidebar.button("送信"):
     st.write("### 治療の有効性")
     st.dataframe(treatment_df[['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Net Benefit']])
 
+    # Pie Chart Visualization of Treatment Effectiveness
+    st.subheader("治療の有効性（1000人あたり）")
+    fig, ax = plt.subplots()
+    ax.pie(treatment_df['Net Benefit'], labels=treatment_df['Outcome'], autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    st.pyplot(fig)
+    
     st.subheader("閾値分析")
     st.write("このセクションでは、治療効果が信頼できる範囲内にあるかどうかを強調します。")
     st.dataframe(treatment_df[['Outcome', 'Threshold Low', 'Threshold High']])
