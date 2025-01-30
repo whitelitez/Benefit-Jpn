@@ -4,16 +4,24 @@ import pandas as pd
 import numpy as np
 
 # Get the absolute path to the Excel file
-FILE_PATH = os.path.join(os.path.dirname(__file__), "正味の益計算表.xlsx")
+FILE_PATH = os.path.join(os.path.dirname(__file__), "net_benefit_rd_md_v0.97.xlsx")
 
 # Load Excel file directly from the app's directory
 @st.cache_data
 def load_data():
     xls = pd.ExcelFile(FILE_PATH)
-    return {sheet: xls.parse(sheet) for sheet in xls.sheet_names}
+    data = {sheet: xls.parse(sheet) for sheet in xls.sheet_names}
+    return data
 
 # Load the data once at startup
 data = load_data()
+
+def get_treatment_data():
+    df = data['RD_信頼区間_相関係数から_比']
+    df = df.iloc[3:, [2, 5, 6, 7, 8, 9, 37, 38, 39, 40]]  # Extract relevant columns
+    df.columns = ['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Relative Importance', 'Standardized Importance', 'Threshold Low', 'Threshold High', 'Estimate', 'Net Benefit']
+    df.dropna(inplace=True)
+    return df
 
 # App UI
 st.title("脳卒中予防の意思決定ツール")
@@ -28,27 +36,17 @@ risk_factors = st.sidebar.multiselect("その他のリスク要因", ["家族歴
 if st.sidebar.button("送信"):
     st.subheader("あなたのデータに基づく治療オプション")
     st.write("システムがリスクとベネフィットスコアを計算しています...")
-
-    # Dummy placeholder logic, replace with real formulas from the Excel files
-    treatment_options = ["薬剤A", "薬剤B", "ライフスタイルの改善"]
-    effectiveness = np.random.randint(50, 90, size=len(treatment_options))
-    risk = np.random.randint(5, 20, size=len(treatment_options))
-    confidence_interval = [(eff - 5, eff + 5) for eff in effectiveness]
-
-    df = pd.DataFrame({
-        "治療法": treatment_options,
-        "1000人あたりの有効性": effectiveness,
-        "リスクレベル": risk,
-        "信頼区間": confidence_interval
-    })
-
-    st.table(df)
+    
+    treatment_df = get_treatment_data()
+    
+    st.write("### 治療の有効性")
+    st.dataframe(treatment_df[['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Net Benefit']])
 
     st.subheader("閾値分析")
     st.write("このセクションでは、治療効果が信頼できる範囲内にあるかどうかを強調します。")
-    # Placeholder for threshold calculation
-    st.write("閾値ステータス: **安定** (安全な利益範囲内)")
+    st.dataframe(treatment_df[['Outcome', 'Threshold Low', 'Threshold High']])
 
     st.subheader("最終推奨事項")
-    st.write("計算結果に基づき、治療Xを検討してください。最終決定の前に医師に相談してください。")
+    best_treatment = treatment_df.sort_values(by='Net Benefit', ascending=False).iloc[0]
+    st.write(f"計算結果に基づき、最も推奨される治療は **{best_treatment['Outcome']}** です。最終決定の前に医師に相談してください。")
     st.button("最初からやり直す")
