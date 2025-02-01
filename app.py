@@ -19,37 +19,10 @@ data = load_data()
 
 def get_treatment_data():
     df = data['RD_信頼区間_相関係数から_比']
-    df = df.iloc[3:, [1, 2, 5, 6, 7, 8, 9, 37, 38, 39, 40]]  # Adjusted column selection
-    df.columns = ['Outcome', 'Outcome ID', 'Risk Difference', 'Lower CI', 'Upper CI',
-                  'Relative Importance', 'Standardized Importance', 'Threshold Low', 'Threshold High',
-                  'Estimate', 'Net Benefit']
-    df.dropna(subset=['Outcome'], inplace=True)  # Remove empty rows
-    
-    # Convert numeric columns
-    numeric_cols = ['Risk Difference', 'Lower CI', 'Upper CI', 'Relative Importance', 'Standardized Importance', 
-                    'Threshold Low', 'Threshold High', 'Estimate', 'Net Benefit']
-    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
-    
-    # Normalize Net Benefit values for better visualization
-    max_benefit = df['Net Benefit'].max()
-    min_benefit = df['Net Benefit'].min()
-    if max_benefit != min_benefit:
-        df['Normalized Net Benefit'] = (df['Net Benefit'] - min_benefit) / (max_benefit - min_benefit)
-    else:
-        df['Normalized Net Benefit'] = 1  # If all values are the same, set them to max
-
-    # Categorize Benefit Levels
-    def classify_benefit(value):
-        if value >= 0.07:
-            return "高い利益 (High Benefit)"
-        elif value >= 0.03:
-            return "中程度の利益 (Moderate Benefit)"
-        elif value >= 0.00:
-            return "低い利益 (Low Benefit)"
-        else:
-            return "利益なし (No Benefit)"
-    
-    df['Benefit Category'] = df['Net Benefit'].apply(classify_benefit)
+    df = df.iloc[3:, [2, 5, 6, 7, 8, 9, 37, 38, 39, 40]]  # Extract relevant columns
+    df.columns = ['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Relative Importance', 'Standardized Importance', 'Threshold Low', 'Threshold High', 'Estimate', 'Net Benefit']
+    df.dropna(inplace=True)
+    df = df[df['Net Benefit'] >= 0]  # Ensure all values for the pie chart are non-negative
     return df
 
 # App UI
@@ -69,13 +42,13 @@ if st.sidebar.button("送信"):
     treatment_df = get_treatment_data()
     
     st.write("### 治療の有効性")
-    st.dataframe(treatment_df[['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Benefit Category']])
+    st.dataframe(treatment_df[['Outcome', 'Risk Difference', 'Lower CI', 'Upper CI', 'Net Benefit']])
 
     # Pie Chart Visualization of Treatment Effectiveness
     st.subheader("治療の有効性（1000人あたり）")
     if not treatment_df.empty:
         fig, ax = plt.subplots()
-        ax.pie(treatment_df['Normalized Net Benefit'], labels=treatment_df['Outcome'], autopct='%1.1f%%', startangle=90)
+        ax.pie(treatment_df['Net Benefit'], labels=treatment_df['Outcome'], autopct='%1.1f%%', startangle=90)
         ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
         st.pyplot(fig)
     else:
@@ -91,5 +64,4 @@ if st.sidebar.button("送信"):
         st.write(f"計算結果に基づき、最も推奨される治療は **{best_treatment['Outcome']}** です。最終決定の前に医師に相談してください。")
     else:
         st.write("適切なデータがないため、推奨治療を計算できません。")
-    
     st.button("最初からやり直す")
