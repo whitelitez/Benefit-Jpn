@@ -64,7 +64,7 @@ def main():
     # ------------------------------------------
     # 4) Sidebar: Constraints (UNCHANGED)
     # ------------------------------------------
-    st.sidebar.header("② 追加の制約を考慮")
+    st.sidebar.header("② あなたの価値観")
     st.sidebar.write("費用面・アクセス面・介助面などの問題度を選んでください。")
 
     financial_label = st.sidebar.radio(
