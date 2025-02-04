@@ -82,7 +82,7 @@ def main():
     access_val = constraint_map[access_label]
 
     care_label = st.sidebar.radio(
-        "介助面の制約（自宅での世話など）",
+        "日常生活の制約（介護など）",
         list(constraint_map.keys()),
         index=0
     )
