@@ -10,8 +10,8 @@ def main():
     # ------------------------------------------
     # 1) Dictionaries for user-friendly vs numeric
     # ------------------------------------------
-    importance_map = {"高い": 1.0, "中くらい": 0.5, "低い": 0.0}
-    sign_map = {"良い": +1, "悪い": -1}
+    importance_map = {"重要": 1.0, "やや重要": 0.5, "重要でない": 0.0}
+    sign_map = {"益": +1, "害": -1}
     constraint_map = {
         "特に問題ない": 0.0,
         "少し問題がある": 0.5,
@@ -22,46 +22,42 @@ def main():
     # 2) Five outcomes
     # ------------------------------------------
     outcome_defs = [
-        {"label": "脳卒中を防ぐ",    "default_slider": 50, "default_sign": "良い"},
-        {"label": "心不全を防ぐ",   "default_slider": 50, "default_sign": "良い"},
-        {"label": "めまいが起こる","default_slider": 50, "default_sign": "悪い"},
-        {"label": "頻尿が増える",  "default_slider": 50, "default_sign": "悪い"},
-        {"label": "転倒が起きる",  "default_slider": 50, "default_sign": "悪い"},
+        {"label": "脳卒中予防", "default_slider": 50, "default_sign": "益"},
+        {"label": "心不全予防", "default_slider": 50, "default_sign": "益"},
+        {"label": "めまい", "default_slider": 50, "default_sign": "害"},
+        {"label": "頻尿", "default_slider": 50, "default_sign": "害"},
+        {"label": "転倒", "default_slider": 50, "default_sign": "害"},
     ]
 
     # ------------------------------------------
-    # 3) Sidebar: Outcomes
+    # 3) Main Section: Outcomes
     # ------------------------------------------
-    st.sidebar.header("① 治療アウトカムの評価")
+    st.header("① 高血圧に対する内服薬のアウトカム")
     user_data = []
     for od in outcome_defs:
-        st.sidebar.write(f"### {od['label']}")
+        st.write(f"### {od['label']} ({od['default_sign']})")
 
-        val = st.sidebar.slider(
-            f"{od['label']}：変化の大きさ (0=良くなる〜100=悪くなる目安)",
+        # Slider for magnitude of change
+        val = st.slider(
+            f"{od['label']} の変化の大きさ (0=良くなる〜100=悪くなる目安)",
             min_value=0, max_value=100,
             value=od["default_slider"], step=1
         )
         rd_value = slider_to_rd(val)  # Convert 0..100 => -0.2..+0.2
 
-        chosen_sign_label = st.sidebar.radio(
-            f"{od['label']} は良い？悪い？",
-            list(sign_map.keys()),
-            index=0 if od["default_sign"] == "良い" else 1
-        )
-        sign_value = sign_map[chosen_sign_label]
-
-        chosen_imp_label = st.sidebar.radio(
+        # Importance selection
+        chosen_imp_label = st.radio(
             f"{od['label']} の重要度は？",
             list(importance_map.keys()),
             index=0
         )
         imp_value = importance_map[chosen_imp_label]
 
+        # Store user data
         user_data.append({
             "outcome": od["label"],
             "rd": rd_value,
-            "sign": sign_value,
+            "sign": sign_map[od["default_sign"]],
             "importance": imp_value,
         })
 
@@ -119,7 +115,7 @@ def show_results(user_data, financial_val, access_val, care_val):
     for row in user_data:
         arrow = get_arrow(row["rd"])
         stars_html = star_html_3(row["importance"])  # HTML-based star approach
-        sign_text = "良い" if row["sign"] == +1 else "悪い"
+        sign_text = "益" if row["sign"] == +1 else "害"
 
         # Note: we use st.markdown(..., unsafe_allow_html=True) to show color stars
         st.markdown(
@@ -180,7 +176,6 @@ def star_html_3(importance):
     High (1.0): 3 gold
     Medium (0.5): 2 gold, 1 gray
     Low (0.0): 1 gold, 2 gray
-    If you want 0 gold for Low => 0.0 => 0 gold, 3 gray, adjust accordingly.
     """
     # Decide how many "filled" stars to show
     if importance == 1.0:
