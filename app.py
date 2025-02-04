@@ -11,7 +11,7 @@ def main():
     # 1) Dictionaries for user-friendly vs numeric
     # ------------------------------------------
     importance_map = {"重要": 1.0, "やや重要": 0.5, "重要でない": 0.0}
-    sign_map = {"益": +1, "害": -1}
+    sign_map = {"良い": +1, "悪い": -1}
     constraint_map = {
         "特に問題ない": 0.0,
         "少し問題がある": 0.5,
@@ -22,11 +22,11 @@ def main():
     # 2) Five outcomes
     # ------------------------------------------
     outcome_defs = [
-        {"label": "脳卒中予防", "default_slider": 50, "default_sign": "益"},
-        {"label": "心不全予防", "default_slider": 50, "default_sign": "益"},
-        {"label": "めまい", "default_slider": 50, "default_sign": "害"},
-        {"label": "頻尿", "default_slider": 50, "default_sign": "害"},
-        {"label": "転倒", "default_slider": 50, "default_sign": "害"},
+        {"label": "脳卒中予防", "default_slider": 50, "default_sign": "良い"},
+        {"label": "心不全予防", "default_slider": 50, "default_sign": "良い"},
+        {"label": "めまい", "default_slider": 50, "default_sign": "悪い"},
+        {"label": "頻尿", "default_slider": 50, "default_sign": "悪い"},
+        {"label": "転倒", "default_slider": 50, "default_sign": "悪い"},
     ]
 
     # ------------------------------------------
@@ -35,7 +35,7 @@ def main():
     st.header("① 高血圧に対する内服薬のアウトカム")
     user_data = []
     for od in outcome_defs:
-        st.write(f"### {od['label']} ({od['default_sign']})")
+        st.write(f"### {od['label']} ({'益' if od['default_sign'] == '良い' else '害'})")
 
         # Slider for magnitude of change
         val = st.slider(
@@ -62,7 +62,7 @@ def main():
         })
 
     # ------------------------------------------
-    # 4) Sidebar: Constraints
+    # 4) Sidebar: Constraints (UNCHANGED)
     # ------------------------------------------
     st.sidebar.header("② 追加の制約を考慮")
     st.sidebar.write("費用面・アクセス面・介助面などの問題度を選んでください。")
@@ -89,11 +89,14 @@ def main():
     care_val = constraint_map[care_label]
 
     # ------------------------------------------
-    # Button
+    # Button (UNCHANGED)
     # ------------------------------------------
     if st.button("結果を見る"):
         show_results(user_data, financial_val, access_val, care_val)
 
+# ------------------------------------------
+# Rest of the code (UNCHANGED)
+# ------------------------------------------
 def show_results(user_data, financial_val, access_val, care_val):
     net_effect = sum(row["rd"] * row["sign"] * row["importance"] for row in user_data)
 
@@ -115,7 +118,7 @@ def show_results(user_data, financial_val, access_val, care_val):
     for row in user_data:
         arrow = get_arrow(row["rd"])
         stars_html = star_html_3(row["importance"])  # HTML-based star approach
-        sign_text = "益" if row["sign"] == +1 else "害"
+        sign_text = "良い" if row["sign"] == +1 else "悪い"
 
         # Note: we use st.markdown(..., unsafe_allow_html=True) to show color stars
         st.markdown(
@@ -140,7 +143,7 @@ def show_results(user_data, financial_val, access_val, care_val):
     st.write(f"- アクセス面: {value_to_label(access_val)}")
     st.write(f"- 介助面: {value_to_label(care_val)}")
 
-# ---------------- HELPER FUNCTIONS ----------------
+# ---------------- HELPER FUNCTIONS (UNCHANGED) ----------------
 
 def slider_to_rd(val):
     """
