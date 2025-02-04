@@ -1,7 +1,7 @@
 import streamlit as st
 
 def main():
-    st.title("① 高血圧に対する内服薬のアウトカム")
+    st.title("高血圧治療 オプション評価ツール (カラー星バージョン)")
     st.markdown("""
     重要度を3つの星で表しますが、星は同じ形 (★) を使い、
     色によって「埋まっている (金色)」「埋まっていない (灰色)」を区別します。
@@ -30,66 +30,68 @@ def main():
     ]
 
     # ------------------------------------------
-    # 3) Main Section: Outcomes
+    # 3) Part 1: Doctor's Input - Outcomes (Main UI)
     # ------------------------------------------
-    st.header("① 高血圧に対する内服薬のアウトカム")
-    user_data = []
-    for od in outcome_defs:
-        st.write(f"### {od['label']} ({'益' if od['default_sign'] == '良い' else '害'})")
+    st.header("① 医師の入力: 治療アウトカムの評価")
+    with st.expander("治療アウトカムを入力する", expanded=True):
+        user_data = []
+        for od in outcome_defs:
+            st.write(f"### {od['label']} ({'益' if od['default_sign'] == '良い' else '害'})")
 
-        # Slider for magnitude of change
-        val = st.slider(
-            f"{od['label']} の変化の大きさ (0=良くなる〜100=悪くなる目安)",
-            min_value=0, max_value=100,
-            value=od["default_slider"], step=1
-        )
-        rd_value = slider_to_rd(val)  # Convert 0..100 => -0.2..+0.2
+            # Slider for magnitude of change
+            val = st.slider(
+                f"{od['label']} の変化の大きさ (0=良くなる〜100=悪くなる目安)",
+                min_value=0, max_value=100,
+                value=od["default_slider"], step=1
+            )
+            rd_value = slider_to_rd(val)  # Convert 0..100 => -0.2..+0.2
 
-        # Importance selection
-        chosen_imp_label = st.radio(
-            f"{od['label']} の重要度は？",
-            list(importance_map.keys()),
+            # Importance selection
+            chosen_imp_label = st.radio(
+                f"{od['label']} の重要度は？",
+                list(importance_map.keys()),
+                index=0
+            )
+            imp_value = importance_map[chosen_imp_label]
+
+            # Store user data
+            user_data.append({
+                "outcome": od["label"],
+                "rd": rd_value,
+                "sign": sign_map[od["default_sign"]],
+                "importance": imp_value,
+            })
+
+    # ------------------------------------------
+    # 4) Part 2: Patient's Input - Constraints (Main UI)
+    # ------------------------------------------
+    st.header("② 患者の入力: 追加の制約を考慮")
+    with st.expander("制約を入力する", expanded=True):
+        st.write("費用面・アクセス面・介助面などの問題度を選んでください。")
+
+        financial_label = st.radio(
+            "費用面の制約",
+            list(constraint_map.keys()),
             index=0
         )
-        imp_value = importance_map[chosen_imp_label]
+        financial_val = constraint_map[financial_label]
 
-        # Store user data
-        user_data.append({
-            "outcome": od["label"],
-            "rd": rd_value,
-            "sign": sign_map[od["default_sign"]],
-            "importance": imp_value,
-        })
+        access_label = st.radio(
+            "アクセス面の制約（通院など）",
+            list(constraint_map.keys()),
+            index=0
+        )
+        access_val = constraint_map[access_label]
 
-    # ------------------------------------------
-    # 4) Sidebar: Constraints (UNCHANGED)
-    # ------------------------------------------
-    st.sidebar.header("② あなたの価値観")
-    st.sidebar.write("費用面・アクセス面・介助面などの問題度を選んでください。")
-
-    financial_label = st.sidebar.radio(
-        "費用面の制約",
-        list(constraint_map.keys()),
-        index=0
-    )
-    financial_val = constraint_map[financial_label]
-
-    access_label = st.sidebar.radio(
-        "アクセス面の制約（通院など）",
-        list(constraint_map.keys()),
-        index=0
-    )
-    access_val = constraint_map[access_label]
-
-    care_label = st.sidebar.radio(
-        "日常生活の制約（介護など）",
-        list(constraint_map.keys()),
-        index=0
-    )
-    care_val = constraint_map[care_label]
+        care_label = st.radio(
+            "介助面の制約（自宅での世話など）",
+            list(constraint_map.keys()),
+            index=0
+        )
+        care_val = constraint_map[care_label]
 
     # ------------------------------------------
-    # Button (UNCHANGED)
+    # Button (Main UI)
     # ------------------------------------------
     if st.button("結果を見る"):
         show_results(user_data, financial_val, access_val, care_val)
