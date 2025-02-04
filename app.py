@@ -32,7 +32,7 @@ def main():
     # ------------------------------------------
     # 3) Part 1: Doctor's Input - Outcomes (Main UI)
     # ------------------------------------------
-    st.header("① 医師の入力: 治療アウトカムの評価")
+    st.header("① 高血圧に対する内服薬のアウトカム")
     with st.expander("治療アウトカムを入力する", expanded=True):
         user_data = []
         for od in outcome_defs:
@@ -65,7 +65,7 @@ def main():
     # ------------------------------------------
     # 4) Part 2: Patient's Input - Constraints (Main UI)
     # ------------------------------------------
-    st.header("② 患者の入力: 追加の制約を考慮")
+    st.header("② あなたの価値観")
     with st.expander("制約を入力する", expanded=True):
         st.write("費用面・アクセス面・介助面などの問題度を選んでください。")
 
@@ -84,7 +84,7 @@ def main():
         access_val = constraint_map[access_label]
 
         care_label = st.radio(
-            "介助面の制約（自宅での世話など）",
+            "日常生活の制約（介護など）",
             list(constraint_map.keys()),
             index=0
         )
