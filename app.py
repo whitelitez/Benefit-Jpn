@@ -1,206 +1,254 @@
 import streamlit as st
 
 def main():
-    st.title("高血圧治療 オプション評価ツール (カラー星バージョン)")
-    st.markdown("""
-    重要度を3つの星で表しますが、星は同じ形 (★) を使い、
-    色によって「埋まっている (金色)」「埋まっていない (灰色)」を区別します。
-    """)
+    st.title("正味の益計算 プロトタイプ（カスタムスライダー範囲）")
 
-    # ------------------------------------------
-    # 1) Dictionaries for user-friendly vs numeric
-    # ------------------------------------------
-    importance_map = {"重要": 1.0, "やや重要": 0.5, "重要でない": 0.0}
-    sign_map = {"良い": +1, "悪い": -1}
-    constraint_map = {
-        "特に問題ない": 0.0,
-        "少し問題がある": 0.5,
-        "大きな問題": 1.0
-    }
+    st.markdown(
+        """
+        <p style='color:red; font-weight:bold;'>
+        （日本語版：セル参照などの技術的表記は非表示）
+        </p>
+        <p>
+        <strong>概要：</strong><br>
+        このアプリでは、各アウトカム（脳卒中予防・心不全予防・めまい・頻尿・転倒）に関する
+        <em>推定リスク差</em> と <em>重要度</em> を入力し、正味の益スコアを計算します。<br>
+        スライダーの範囲は下記のようにカスタマイズされています：
+        <ul>
+          <li>脳卒中予防 / 心不全予防：–0.10 ～ +0.10</li>
+          <li>めまい / 頻尿 / 転倒：–0.02 ～ +0.02</li>
+        </ul>
+        内部ロジックはエクセルでの計算式（K<sub>k</sub>, K17, K24）に準じています。
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
 
-    # ------------------------------------------
-    # 2) Five outcomes
-    # ------------------------------------------
-    outcome_defs = [
-        {"label": "脳卒中予防", "default_slider": 50, "default_sign": "良い"},
-        {"label": "心不全予防", "default_slider": 50, "default_sign": "良い"},
-        {"label": "めまい", "default_slider": 50, "default_sign": "悪い"},
-        {"label": "頻尿", "default_slider": 50, "default_sign": "悪い"},
-        {"label": "転倒", "default_slider": 50, "default_sign": "悪い"},
+    # アウトカムの定義（固定されたF値、初期E値、重要度など）
+    outcomes = [
+        {
+            "display_name": "脳卒中予防",
+            "f":  1,
+            "default_e":  0.10,
+            "default_i": 100,
+            "min_e": -0.10,
+            "max_e":  0.10
+        },
+        {
+            "display_name": "心不全予防",
+            "f":  1,
+            "default_e": -0.10,
+            "default_i": 29,
+            "min_e": -0.10,
+            "max_e":  0.10
+        },
+        {
+            "display_name": "めまい",
+            "f": -1,
+            "default_e":  0.02,
+            "default_i":  5,
+            "min_e": -0.02,
+            "max_e":  0.02
+        },
+        {
+            "display_name": "頻尿",
+            "f": -1,
+            "default_e": -0.01,
+            "default_i":  4,
+            "min_e": -0.02,
+            "max_e":  0.02
+        },
+        {
+            "display_name": "転倒",
+            "f": -1,
+            "default_e": -0.02,
+            "default_i": 13,
+            "min_e": -0.02,
+            "max_e":  0.02
+        },
     ]
 
-    # ------------------------------------------
-    # 3) Part 1: Doctor's Input - Outcomes (Main UI)
-    # ------------------------------------------
-    st.header("① 高血圧に対する内服薬のアウトカム")
-    with st.expander("治療アウトカムを入力する", expanded=True):
-        user_data = []
-        for od in outcome_defs:
-            st.write(f"### {od['label']} ({'益' if od['default_sign'] == '良い' else '害'})")
+    # --------------------------
+    # サイドバー：アウトカムの入力
+    # --------------------------
+    st.sidebar.header("① アウトカムとその重要度の調整")
 
-            # Slider for magnitude of change
-            val = st.slider(
-                f"{od['label']} の変化の大きさ (0=良くなる〜100=悪くなる目安)",
-                min_value=0, max_value=100,
-                value=od["default_slider"], step=1
-            )
-            rd_value = slider_to_rd(val)  # Convert 0..100 => -0.2..+0.2
+    user_data = []
+    for item in outcomes:
+        st.sidebar.subheader(item["display_name"])
 
-            # Importance selection
-            chosen_imp_label = st.radio(
-                f"{od['label']} の重要度は？",
-                list(importance_map.keys()),
-                index=0
-            )
-            imp_value = importance_map[chosen_imp_label]
-
-            # Store user data
-            user_data.append({
-                "outcome": od["label"],
-                "rd": rd_value,
-                "sign": sign_map[od["default_sign"]],
-                "importance": imp_value,
-            })
-
-    # ------------------------------------------
-    # 4) Part 2: Patient's Input - Constraints (Main UI)
-    # ------------------------------------------
-    st.header("② あなたの価値観")
-    with st.expander("制約を入力する", expanded=True):
-        st.write("費用面・アクセス面・介助面などの問題度を選んでください。")
-
-        financial_label = st.radio(
-            "費用面の制約",
-            list(constraint_map.keys()),
-            index=0
+        e_val = st.sidebar.slider(
+            f"{item['display_name']}：推定リスク差",
+            min_value=item["min_e"],
+            max_value=item["max_e"],
+            value=float(item["default_e"]),
+            step=0.001
         )
-        financial_val = constraint_map[financial_label]
 
-        access_label = st.radio(
-            "アクセス面の制約（通院など）",
-            list(constraint_map.keys()),
-            index=0
+        i_val = st.sidebar.slider(
+            f"{item['display_name']}：重要度（0 = 重要ではない, 100 = 非常に重要）",
+            min_value=0,
+            max_value=100,
+            value=item["default_i"],
+            step=1
         )
-        access_val = constraint_map[access_label]
 
-        care_label = st.radio(
-            "日常生活の制約（介護など）",
-            list(constraint_map.keys()),
-            index=0
-        )
-        care_val = constraint_map[care_label]
+        user_data.append({
+            "label": item["display_name"],
+            "f": item["f"],
+            "e": e_val,
+            "i": i_val
+        })
 
-    # ------------------------------------------
-    # Button (Main UI)
-    # ------------------------------------------
-    if st.button("結果を見る"):
-        show_results(user_data, financial_val, access_val, care_val)
+    # --------------------------
+    # サイドバー：制約(Constraints)
+    # --------------------------
+    st.sidebar.header("② 制約（Constraints）")
+    st.sidebar.write("各種制約レベルを選んでください：")
 
-# ------------------------------------------
-# Rest of the code (UNCHANGED)
-# ------------------------------------------
-def show_results(user_data, financial_val, access_val, care_val):
-    net_effect = sum(row["rd"] * row["sign"] * row["importance"] for row in user_data)
+    constraint_options = ["問題なし", "やや問題", "大きな問題"]
+    cost_label = st.sidebar.radio("費用面の問題", constraint_options, index=0)
+    access_label = st.sidebar.radio("通院アクセスの問題", constraint_options, index=0)
+    care_label = st.sidebar.radio("介助面の問題", constraint_options, index=0)
 
-    st.subheader("A) 治療アウトカムに関するコメント")
-    if net_effect > 0.05:
-        st.error("全体として、やや悪化する可能性が高いかもしれません。")
-    elif net_effect > 0:
-        st.warning("どちらかと言うと悪い方向ですが、大きくはないかもしれません。")
-    elif abs(net_effect) < 1e-9:
-        st.info("良い影響と悪い影響が釣り合っているか、ほぼ変化がないかもしれません。")
-    else:
-        # net_effect < 0
-        if net_effect < -0.05:
-            st.success("全体的に改善が期待できるかもしれません。")
-        else:
-            st.info("多少の改善があるかもしれませんが、大きくはないでしょう。")
+    cost_val = constraint_to_numeric(cost_label)
+    access_val = constraint_to_numeric(access_label)
+    care_val = constraint_to_numeric(care_label)
 
-    st.markdown("### 各項目の様子")
+    # ボタン
+    if st.sidebar.button("正味の益を計算する"):
+        show_results(user_data, cost_val, access_val, care_val)
+
+
+def show_results(user_data, cost_val, access_val, care_val):
+    st.subheader("正味の益（Net Benefit）計算結果")
+
+    # 1) 重要度の合計
+    total_i = sum(row["i"] for row in user_data)
+    if abs(total_i) < 1e-9:
+        st.error("すべてのアウトカムの重要度が0です。少なくとも1つは重要度を0より大きくしてください。")
+        return
+
+    # 2) アウトカムごとの貢献度計算
+    st.markdown("### 各アウトカムの詳細")
+    k_values = []
     for row in user_data:
-        arrow = get_arrow(row["rd"])
-        stars_html = star_html_3(row["importance"])  # HTML-based star approach
-        sign_text = "良い" if row["sign"] == +1 else "悪い"
+        j_k = row["i"] / total_i
+        k_k = row["e"] * j_k * row["f"]
+        k_values.append(k_k)
 
-        # Note: we use st.markdown(..., unsafe_allow_html=True) to show color stars
+        arrow = get_arrow(row["e"] * row["f"])
+        stars = star_html_3(row["i"])
+
         st.markdown(
-            f"- **{row['outcome']}**：{stars_html} {arrow} ({sign_text})",
+            f"- **{row['label']}**：{arrow} {stars} "
+            f"(推定リスク差 = {row['e']:.3f}, 重要度 = {row['i']})",
             unsafe_allow_html=True
         )
 
-    # Constraints
-    st.subheader("B) 制約に関するコメント")
-    constraint_total = financial_val + access_val + care_val
-    if constraint_total <= 0.0:
-        st.success("特に大きな問題はなさそうです。治療を進めやすい状況と言えます。")
-    elif constraint_total <= 1.0:
-        st.info("多少気になる点がありますが、比較的対処しやすい可能性があります。")
-    elif constraint_total <= 2.0:
-        st.warning("いくつかの面で大きな負担が想定されます。対策が必要でしょう。")
+    # 正味の益の合計（K値の合計）
+    net_sum = sum(k_values)
+    # 1000人あたりの人数に換算
+    score_1000 = round(1000 * net_sum, 0)
+
+    # 解釈
+    if net_sum > 0:
+        st.warning("全体として有害方向になる可能性があります（プラス方向）。")
+    elif abs(net_sum) < 1e-9:
+        st.info("全体としてほぼ変化がない（ニュートラル）可能性があります。")
     else:
-        st.error("費用や通院・介助など、非常に大きな制約があるようです。慎重な検討が必要です。")
+        st.success("全体として有益方向になる可能性があります（マイナス方向）。")
 
-    st.markdown("### 制約の内訳")
-    st.write(f"- 費用面: {value_to_label(financial_val)}")
-    st.write(f"- アクセス面: {value_to_label(access_val)}")
-    st.write(f"- 介助面: {value_to_label(care_val)}")
+    st.markdown(
+        f"**正味の益スコア（合計）**： {net_sum:.4f}<br>"
+        f"**1000人あたりの人数**： {score_1000:.0f}人",
+        unsafe_allow_html=True
+    )
 
-# ---------------- HELPER FUNCTIONS (UNCHANGED) ----------------
-
-def slider_to_rd(val):
-    """
-    Convert a 0..100 slider to -0.2..+0.2 range
-    so that 50 => 0.0, 0 => -0.2, 100 => +0.2
-    """
-    normalized = (val - 50) / 50.0  # -1..+1
-    return 0.2 * normalized        # -0.2..+0.2
-
-def get_arrow(rd):
-    """Return arrow emoji based on RD threshold."""
-    if rd > 0.05:
-        return "↑"
-    elif rd < -0.05:
-        return "↓"
+    # 制約に関する情報
+    st.subheader("制約（Constraints）の状況")
+    constraint_total = cost_val + access_val + care_val
+    if constraint_total == 0:
+        st.success("大きな制約は見当たりません。導入しやすい状況です。")
+    elif constraint_total <= 1:
+        st.info("多少の制約はありますが、比較的対応できそうです。")
+    elif constraint_total <= 2:
+        st.warning("複数の制約が見られます。追加のサポートや対策を検討してください。")
     else:
-        return "→"
+        st.error("費用・通院アクセス・介助面など、大きな問題がある可能性があります。慎重な検討が必要です。")
 
-def value_to_label(val):
-    """ Convert 0.0/0.5/1.0 -> textual label for constraints """
-    if val == 0.0:
-        return "特に問題ない"
-    elif val == 0.5:
-        return "少し問題がある"
+    st.write(f"- 費用面：**{numeric_to_constraint_label(cost_val)}**")
+    st.write(f"- アクセス面：**{numeric_to_constraint_label(access_val)}**")
+    st.write(f"- 介助面：**{numeric_to_constraint_label(care_val)}**")
+
+    # プレースホルダー：さらに高度な解析など
+    st.subheader("その他の高度な解析（Placeholder）")
+    st.markdown(
+        """
+        <p style='color:red; font-weight:bold;'>
+        （本番環境では非表示）
+        </p>
+        <ul>
+          <li>相関や高度な加重（AHP, DCE）を取り入れた計算</li>
+          <li>信頼区間を考慮した確率的アプローチ</li>
+          <li>有益・有害アウトカムの整理や図表化</li>
+        </ul>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# ---------------- HELPER FUNCTIONS ----------------
+
+def constraint_to_numeric(label):
+    """制約レベルを数値に変換"""
+    if label == "問題なし":
+        return 0.0
+    elif label == "やや問題":
+        return 0.5
+    else:
+        return 1.0
+
+def numeric_to_constraint_label(value):
+    """数値を制約レベルに戻す"""
+    if value == 0.0:
+        return "問題なし"
+    elif value == 0.5:
+        return "やや問題"
     else:
         return "大きな問題"
 
-def star_html_3(importance):
+def get_arrow(value):
+    """値の符号に応じて矢印を返す"""
+    if value > 0.05:
+        return "⬆️"
+    elif value < -0.05:
+        return "⬇️"
+    else:
+        return "➡️"
+
+def star_html_3(importance_0to100):
     """
-    Return an HTML string with 3 stars in a row:
-      - Gold (color:gold) for 'filled'
-      - LightGray (color:lightgray) for 'empty'
-    High (1.0): 3 gold
-    Medium (0.5): 2 gold, 1 gray
-    Low (0.0): 1 gold, 2 gray
+    0..100 の重要度を 1〜3 の星に変換
+    例：
+      0〜33  => ★1
+      34〜66 => ★2
+      67〜100=> ★3
     """
-    # Decide how many "filled" stars to show
-    if importance == 1.0:
-        filled = 3
-    elif importance == 0.5:
+    if importance_0to100 <= 33:
+        filled = 1
+    elif importance_0to100 <= 66:
         filled = 2
     else:
-        filled = 1  # or 0 if you want no gold for low
+        filled = 3
 
-    total = 3
-    stars_html = ""
-    for i in range(total):
+    stars = ""
+    for i in range(3):
         if i < filled:
-            # Filled star
-            stars_html += "<span style='color:gold;font-size:18px;'>★</span>"
+            stars += "<span style='color:gold;font-size:18px;'>★</span>"
         else:
-            # Hollow star (same shape but gray color)
-            stars_html += "<span style='color:lightgray;font-size:18px;'>★</span>"
+            stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
+    return stars
 
-    return stars_html
 
 if __name__ == "__main__":
     main()
