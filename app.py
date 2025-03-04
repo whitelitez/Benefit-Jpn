@@ -130,25 +130,24 @@ def show_results(user_data, cost_val, access_val, care_val):
 
     # 2) アウトカムごとの貢献度計算
     st.markdown("### 各アウトカムの詳細")
-    k_values = []
-    for row in user_data:
-        # Normalize importance by total importance
-        j_k = row["i"] / total_i
 
-        # Weighted effect
-        k_k = row["e"] * j_k * row["f"]
+    # This will store each outcome's net effect (k_k)
+    k_values = []
+
+    for row in user_data:
+        # Weight (share of total importance)
+        w_k = row["i"] / total_i
+        # Net contribution for this outcome
+        k_k = row["e"] * w_k * row["f"]  # risk diff x weight x direction
         k_values.append(k_k)
 
-        # Determine arrow (direction of effect)
-        arrow_html = get_arrow(row["e"] * row["f"])
-        # Convert importance to star rating
-        stars = star_html_3(row["i"])
+        # Render color-coded stars based on k_k
+        stars_html = star_html_5(k_k)
 
-        # Display outcome info with arrow + stars
         st.markdown(
-            f"- <strong>{row['label']}</strong>: "
-            f"{stars} {arrow_html} "
-            f"(推定リスク差 = {row['e']:.3f}, 重要度 = {row['i']})",
+            f"- <strong>{row['label']}</strong>: {stars_html} "
+            f"(推定リスク差={row['e']:.3f}, 重要度={row['i']}, "
+            f"貢献度={k_k:.4f})",
             unsafe_allow_html=True
         )
 
@@ -224,46 +223,55 @@ def numeric_to_constraint_label(value):
     else:
         return "大きな問題"
 
-def get_arrow(value):
+def star_html_5(net_effect):
     """
-    Show an arrow indicating direction of effect.
-    Use color coding for clarity:
-      - Green arrow up if strongly positive
-      - Red arrow down if strongly negative
-      - Gray arrow right if near zero
+    Return a string of up to 5 colored stars, 
+    green if net_effect > 0, red if net_effect < 0.
+    Zero or near zero => gray dash or 0 stars.
+
+    Feel free to adjust thresholds for how many stars.
+    Below is an example scale:
+      abs_value < 0.005 => 0 stars
+      0.005 - 0.02      => 1 star
+      0.02  - 0.04      => 2 stars
+      0.04  - 0.06      => 3 stars
+      0.06  - 0.08      => 4 stars
+      >= 0.08           => 5 stars
     """
-    if value > 0.05:
-        return "<span style='color:green;'>⬆️</span>"
-    elif value < -0.05:
-        return "<span style='color:red;'>⬇️</span>"
+
+    abs_val = abs(net_effect)
+
+    # Determine number of stars
+    if abs_val < 0.005:
+        star_count = 0
+    elif abs_val < 0.02:
+        star_count = 1
+    elif abs_val < 0.04:
+        star_count = 2
+    elif abs_val < 0.06:
+        star_count = 3
+    elif abs_val < 0.08:
+        star_count = 4
     else:
-        return "<span style='color:gray;'>➡️</span>"
+        star_count = 5
 
-def star_html_3(importance_0to100):
-    """
-    0..100 の重要度を 1〜3 の星に変換
-      0〜33  => ★1
-      34〜66 => ★2
-      67〜100=> ★3
-    """
-    if importance_0to100 == 0:
-        # Show no stars if importance is 0
-        return "<span style='color:lightgray;font-size:18px;'>―</span>"
+    if star_count == 0:
+        # Show just a dash for near-zero
+        return "<span style='color:gray;font-size:18px;'>—</span>"
 
-    if importance_0to100 <= 33:
-        filled = 1
-    elif importance_0to100 <= 66:
-        filled = 2
-    else:
-        filled = 3
+    # Color: green if net_effect > 0, red if net_effect < 0
+    star_color = "green" if net_effect > 0 else "red"
+    star_html = ""
+    for i in range(star_count):
+        star_html += f"<span style='color:{star_color};font-size:18px;'>★</span>"
 
-    stars = ""
-    for i in range(3):
-        if i < filled:
-            stars += "<span style='color:gold;font-size:18px;'>★</span>"
-        else:
-            stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
-    return stars
+    # If fewer than 5, fill remaining with light gray for spacing
+    remainder = 5 - star_count
+    for i in range(remainder):
+        star_html += "<span style='color:lightgray;font-size:18px;'>★</span>"
+
+    return star_html
+
 
 if __name__ == "__main__":
     main()
