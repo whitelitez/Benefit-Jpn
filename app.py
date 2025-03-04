@@ -132,25 +132,32 @@ def show_results(user_data, cost_val, access_val, care_val):
     st.markdown("### 各アウトカムの詳細")
     k_values = []
     for row in user_data:
+        # Normalize importance by total importance
         j_k = row["i"] / total_i
+
+        # Weighted effect
         k_k = row["e"] * j_k * row["f"]
         k_values.append(k_k)
 
-        arrow = get_arrow(row["e"] * row["f"])
+        # Determine arrow (direction of effect)
+        arrow_html = get_arrow(row["e"] * row["f"])
+        # Convert importance to star rating
         stars = star_html_3(row["i"])
 
+        # Display outcome info with arrow + stars
         st.markdown(
-            f"- **{row['label']}**：{arrow} {stars} "
+            f"- <strong>{row['label']}</strong>: "
+            f"{stars} {arrow_html} "
             f"(推定リスク差 = {row['e']:.3f}, 重要度 = {row['i']})",
             unsafe_allow_html=True
         )
 
-    # 正味の益の合計（K値の合計）
+    # Sum net benefit
     net_sum = sum(k_values)
-    # 1000人あたりの人数に換算
+    # Per 1000
     score_1000 = round(1000 * net_sum, 0)
 
-    # 解釈
+    # Interpretation
     if net_sum > 0:
         st.warning("全体として有害方向になる可能性があります（プラス方向）。")
     elif abs(net_sum) < 1e-9:
@@ -159,12 +166,12 @@ def show_results(user_data, cost_val, access_val, care_val):
         st.success("全体として有益方向になる可能性があります（マイナス方向）。")
 
     st.markdown(
-        f"**正味の益スコア（合計）**： {net_sum:.4f}<br>"
-        f"**1000人あたりの人数**： {score_1000:.0f}人",
+        f"**正味の益スコア（合計）**: {net_sum:.4f}<br>"
+        f"**1000人あたりの人数**: {score_1000:.0f}人",
         unsafe_allow_html=True
     )
 
-    # 制約に関する情報
+    # Constraints section
     st.subheader("制約（Constraints）の状況")
     constraint_total = cost_val + access_val + care_val
     if constraint_total == 0:
@@ -176,11 +183,11 @@ def show_results(user_data, cost_val, access_val, care_val):
     else:
         st.error("費用・通院アクセス・介助面など、大きな問題がある可能性があります。慎重な検討が必要です。")
 
-    st.write(f"- 費用面：**{numeric_to_constraint_label(cost_val)}**")
-    st.write(f"- アクセス面：**{numeric_to_constraint_label(access_val)}**")
-    st.write(f"- 介助面：**{numeric_to_constraint_label(care_val)}**")
+    st.write(f"- 費用面: **{numeric_to_constraint_label(cost_val)}**")
+    st.write(f"- アクセス面: **{numeric_to_constraint_label(access_val)}**")
+    st.write(f"- 介助面: **{numeric_to_constraint_label(care_val)}**")
 
-    # プレースホルダー：さらに高度な解析など
+    # Placeholder for advanced analysis
     st.subheader("その他の高度な解析（Placeholder）")
     st.markdown(
         """
@@ -218,22 +225,31 @@ def numeric_to_constraint_label(value):
         return "大きな問題"
 
 def get_arrow(value):
-    """値の符号に応じて矢印を返す"""
+    """
+    Show an arrow indicating direction of effect.
+    Use color coding for clarity:
+      - Green arrow up if strongly positive
+      - Red arrow down if strongly negative
+      - Gray arrow right if near zero
+    """
     if value > 0.05:
-        return "⬆️"
+        return "<span style='color:green;'>⬆️</span>"
     elif value < -0.05:
-        return "⬇️"
+        return "<span style='color:red;'>⬇️</span>"
     else:
-        return "➡️"
+        return "<span style='color:gray;'>➡️</span>"
 
 def star_html_3(importance_0to100):
     """
     0..100 の重要度を 1〜3 の星に変換
-    例：
       0〜33  => ★1
       34〜66 => ★2
       67〜100=> ★3
     """
+    if importance_0to100 == 0:
+        # Show no stars if importance is 0
+        return "<span style='color:lightgray;font-size:18px;'>―</span>"
+
     if importance_0to100 <= 33:
         filled = 1
     elif importance_0to100 <= 66:
@@ -248,7 +264,6 @@ def star_html_3(importance_0to100):
         else:
             stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
     return stars
-
 
 if __name__ == "__main__":
     main()
