@@ -17,7 +17,7 @@ def main():
           <li>脳卒中予防 / 心不全予防：–0.10 ～ +0.10</li>
           <li>めまい / 頻尿 / 転倒：–0.02 ～ +0.02</li>
         </ul>
-        内部ロジックはエクセルでの計算式（K<sub>k</sub>, K17, K24）に準じています。
+        内部ロジックはエクセルでの計算式に準じています。
         </p>
         """,
         unsafe_allow_html=True
@@ -131,23 +131,19 @@ def show_results(user_data, cost_val, access_val, care_val):
     # 2) アウトカムごとの貢献度計算
     st.markdown("### 各アウトカムの詳細")
 
-    # This will store each outcome's net effect (k_k)
     k_values = []
-
     for row in user_data:
-        # Weight (share of total importance)
+        # Normalize importance by total
         w_k = row["i"] / total_i
-        # Net contribution for this outcome
-        k_k = row["e"] * w_k * row["f"]  # risk diff x weight x direction
+        # Net effect for this outcome
+        k_k = row["e"] * w_k * row["f"]
         k_values.append(k_k)
 
-        # Render color-coded stars based on k_k
-        stars_html = star_html_5(k_k)
-
+        # Show star rating (color-coded by sign, # of stars by magnitude)
+        star_html = star_html_5(k_k)
         st.markdown(
-            f"- <strong>{row['label']}</strong>: {stars_html} "
-            f"(推定リスク差={row['e']:.3f}, 重要度={row['i']}, "
-            f"貢献度={k_k:.4f})",
+            f"- <strong>{row['label']}</strong>: {star_html} "
+            f"(推定リスク差={row['e']:.3f}, 重要度={row['i']}, 貢献度={k_k:.4f})",
             unsafe_allow_html=True
         )
 
@@ -165,8 +161,8 @@ def show_results(user_data, cost_val, access_val, care_val):
         st.success("全体として有益方向になる可能性があります（マイナス方向）。")
 
     st.markdown(
-        f"**正味の益スコア（合計）**: {net_sum:.4f}<br>"
-        f"**1000人あたりの人数**: {score_1000:.0f}人",
+        f"**正味の益スコア（合計）**： {net_sum:.4f}<br>"
+        f"**1000人あたりの人数**： {score_1000:.0f}人",
         unsafe_allow_html=True
     )
 
@@ -182,9 +178,9 @@ def show_results(user_data, cost_val, access_val, care_val):
     else:
         st.error("費用・通院アクセス・介助面など、大きな問題がある可能性があります。慎重な検討が必要です。")
 
-    st.write(f"- 費用面: **{numeric_to_constraint_label(cost_val)}**")
-    st.write(f"- アクセス面: **{numeric_to_constraint_label(access_val)}**")
-    st.write(f"- 介助面: **{numeric_to_constraint_label(care_val)}**")
+    st.write(f"- 費用面：**{numeric_to_constraint_label(cost_val)}**")
+    st.write(f"- アクセス面：**{numeric_to_constraint_label(access_val)}**")
+    st.write(f"- 介助面：**{numeric_to_constraint_label(care_val)}**")
 
     # Placeholder for advanced analysis
     st.subheader("その他の高度な解析（Placeholder）")
@@ -225,47 +221,49 @@ def numeric_to_constraint_label(value):
 
 def star_html_5(net_effect):
     """
-    Return a string of up to 5 colored stars, 
-    green if net_effect > 0, red if net_effect < 0.
-    Zero or near zero => gray dash or 0 stars.
+    Return a string of up to 5 colored stars:
+      - GREEN stars if net_effect > 0
+      - RED stars if net_effect < 0
+      - Gray dash if ~0
+    The magnitude (absolute value) determines how many stars.
 
-    Feel free to adjust thresholds for how many stars.
-    Below is an example scale:
-      abs_value < 0.005 => 0 stars
-      0.005 - 0.02      => 1 star
-      0.02  - 0.04      => 2 stars
-      0.04  - 0.06      => 3 stars
-      0.06  - 0.08      => 4 stars
-      >= 0.08           => 5 stars
+    Adjust these thresholds as desired. For example:
+    - < 0.0005 => 0 stars
+    - < 0.001  => 1 star
+    - < 0.002  => 2 stars
+    - < 0.004  => 3 stars
+    - < 0.008  => 4 stars
+    - else     => 5 stars
     """
 
     abs_val = abs(net_effect)
 
-    # Determine number of stars
-    if abs_val < 0.005:
+    # Fine-grained thresholds for small values
+    if abs_val < 0.0005:
         star_count = 0
-    elif abs_val < 0.02:
+    elif abs_val < 0.001:
         star_count = 1
-    elif abs_val < 0.04:
+    elif abs_val < 0.002:
         star_count = 2
-    elif abs_val < 0.06:
+    elif abs_val < 0.004:
         star_count = 3
-    elif abs_val < 0.08:
+    elif abs_val < 0.008:
         star_count = 4
     else:
         star_count = 5
 
+    # If star_count=0, show dash
     if star_count == 0:
-        # Show just a dash for near-zero
         return "<span style='color:gray;font-size:18px;'>—</span>"
 
-    # Color: green if net_effect > 0, red if net_effect < 0
+    # Color depends on sign
     star_color = "green" if net_effect > 0 else "red"
+
     star_html = ""
     for i in range(star_count):
         star_html += f"<span style='color:{star_color};font-size:18px;'>★</span>"
 
-    # If fewer than 5, fill remaining with light gray for spacing
+    # If you want to show "empty" stars in gray up to 5, uncomment below:
     remainder = 5 - star_count
     for i in range(remainder):
         star_html += "<span style='color:lightgray;font-size:18px;'>★</span>"
