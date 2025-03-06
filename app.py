@@ -23,7 +23,7 @@ def main():
         unsafe_allow_html=True
     )
 
-    # アウトカムの定義（固定されたF値、初期E値、重要度など）
+    # アウトカムの定義（固定されたf値、初期E値、重要度など）
     outcomes = [
         {
             "display_name": "脳卒中予防",
@@ -135,7 +135,7 @@ def show_results(user_data, cost_val, access_val, care_val):
     for row in user_data:
         # Normalize importance by total
         w_k = row["i"] / total_i
-        # Net effect for this outcome
+        # Net effect
         k_k = row["e"] * w_k * row["f"]
         k_values.append(k_k)
 
@@ -147,17 +147,20 @@ def show_results(user_data, cost_val, access_val, care_val):
             unsafe_allow_html=True
         )
 
-    # Sum net benefit
+    # Net benefit sum
     net_sum = sum(k_values)
     # Per 1000
     score_1000 = round(1000 * net_sum, 0)
 
-    # Interpretation
+    # Interpretation with color-coded message
     if net_sum > 0:
-        st.warning("全体として有害方向になる可能性があります（プラス方向）。")
+        # Red box
+        st.error("全体として有害方向になる可能性があります（プラス方向）。")
     elif abs(net_sum) < 1e-9:
+        # Blue box
         st.info("全体としてほぼ変化がない（ニュートラル）可能性があります。")
     else:
+        # Green box
         st.success("全体として有益方向になる可能性があります（マイナス方向）。")
 
     st.markdown(
@@ -166,7 +169,7 @@ def show_results(user_data, cost_val, access_val, care_val):
         unsafe_allow_html=True
     )
 
-    # Constraints section
+    # Constraints
     st.subheader("制約（Constraints）の状況")
     constraint_total = cost_val + access_val + care_val
     if constraint_total == 0:
@@ -182,7 +185,7 @@ def show_results(user_data, cost_val, access_val, care_val):
     st.write(f"- アクセス面：**{numeric_to_constraint_label(access_val)}**")
     st.write(f"- 介助面：**{numeric_to_constraint_label(care_val)}**")
 
-    # Placeholder for advanced analysis
+    # Placeholder
     st.subheader("その他の高度な解析（Placeholder）")
     st.markdown(
         """
@@ -235,13 +238,14 @@ def star_html_5(net_effect):
     - < 0.008  => 4 stars
     - else     => 5 stars
     """
-
     abs_val = abs(net_effect)
 
-    # Fine-grained thresholds for small values
     if abs_val < 0.0005:
-        star_count = 0
-    elif abs_val < 0.001:
+        # Show dash for near-zero
+        return "<span style='color:gray;font-size:18px;'>—</span>"
+
+    # Decide star_count
+    if abs_val < 0.001:
         star_count = 1
     elif abs_val < 0.002:
         star_count = 2
@@ -252,23 +256,18 @@ def star_html_5(net_effect):
     else:
         star_count = 5
 
-    # If star_count=0, show dash
-    if star_count == 0:
-        return "<span style='color:gray;font-size:18px;'>—</span>"
-
-    # Color depends on sign
+    # If net_effect > 0 => green, net_effect < 0 => red
     star_color = "green" if net_effect > 0 else "red"
 
-    star_html = ""
-    for i in range(star_count):
-        star_html += f"<span style='color:{star_color};font-size:18px;'>★</span>"
+    stars = ""
+    for _ in range(star_count):
+        stars += f"<span style='color:{star_color};font-size:18px;'>★</span>"
 
-    # If you want to show "empty" stars in gray up to 5, uncomment below:
-    remainder = 5 - star_count
-    for i in range(remainder):
-        star_html += "<span style='color:lightgray;font-size:18px;'>★</span>"
+    # Fill the remainder (up to 5) with lightgray
+    for _ in range(5 - star_count):
+        stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
 
-    return star_html
+    return stars
 
 
 if __name__ == "__main__":
