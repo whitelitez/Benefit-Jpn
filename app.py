@@ -125,10 +125,10 @@ def show_results(user_data, cost_val, access_val, care_val):
 
     st.markdown("### 合計正味の益")
     st.markdown(
-        f"- **効果推定値s**：Net = {net_sum_s:.4f} → 1000人あたり {score_s}人, {interpret_s}"
+        f"- **効果推定値s**：Net = 1000人あたり {score_s}人, {interpret_s}"
     )
     st.markdown(
-        f"- **効果推定値r**：Net = {net_sum_r:.4f} → 1000人あたり {score_r}人, {interpret_r}"
+        f"- **効果推定値r**：Net = 1000人あたり {score_r}人, {interpret_r}"
     )
 
     # Constraints
