@@ -1,7 +1,7 @@
 import streamlit as st
 
 def main():
-    st.title("正味の益計算：Sheet2 & Sheet3 + スター表示 + カラー解釈")
+    st.title("正味の益計算：効果推定値s & 効果推定値r + スター表示 + カラー解釈")
 
     st.markdown(
         """
@@ -11,8 +11,8 @@ def main():
         <p>
         <strong>概要：</strong><br>
         - 各アウトカムで「リスク差(E)」と「重要度(i)」を入力。<br>
-        - <em>Sheet2</em>：合計重要度で割る（\\( i / \\sum i \\))<br>
-        - <em>Sheet3</em>：最重要アウトカムを100とした比（\\( i / 100 \\))<br>
+        - <em>効果推定値s</em>：合計重要度で割る（\\( i / \\sum i \\))<br>
+        - <em>効果推定値r</em>：最重要アウトカムを100とした比（\\( i / 100 \\))<br>
         - 各アウトカムで2つの貢献度を計算し、それぞれ「net effect」を星表示（正⇒緑、負⇒赤、0⇒灰色ダッシュ）。<br>
         - 合計の正味の益は、プラスなら赤枠、0付近なら青枠、マイナスなら緑枠で表示。<br>
         </p>
@@ -104,8 +104,8 @@ def show_results(user_data, cost_val, access_val, care_val):
         # Display outcome-level line
         st.markdown(
             f"- **{label}**: E={E_val:.3f}, i={i_val}<br>"
-            f"&emsp;**Sheet2**: {star_s} ( {nb_s:.4f} )  "
-            f"&emsp;**Sheet3**: {star_r} ( {nb_r:.4f} )",
+            f"&emsp;**効果推定値s**: {star_s} ( {nb_s:.4f} )  "
+            f"&emsp;**効果推定値r**: {star_r} ( {nb_r:.4f} )",
             unsafe_allow_html=True
         )
 
@@ -118,24 +118,24 @@ def show_results(user_data, cost_val, access_val, care_val):
 
     # Color-coded interpretation for Sheet2
     if net_sum_s > 0:
-        st.error(f"【Sheet2】全体として有害方向になる可能性があります（プラス）。\n"
+        st.error(f"効果推定値s 全体として有害方向になる可能性があります（プラス）。\n"
                  f"Net=1000人あたり={s_1000}人")
     elif abs(net_sum_s) < 1e-9:
-        st.info(f"【Sheet2】全体としてほぼ変化なし（ニュートラル）の可能性。\n"
+        st.info(f"効果推定値s 全体としてほぼ変化なし（ニュートラル）の可能性。\n"
                 f"Net=1000人あたり={s_1000}人")
     else:
-        st.success(f"【Sheet2】全体として有益方向になる可能性があります（マイナス）。\n"
+        st.success(f"効果推定値s 全体として有益方向になる可能性があります（マイナス）。\n"
                    f"Net=1000人あたり={s_1000}人")
 
     # Color-coded interpretation for Sheet3
     if net_sum_r > 0:
-        st.error(f"【Sheet3】全体として有害方向になる可能性があります（プラス）。\n"
+        st.error(f"効果推定値r 全体として有害方向になる可能性があります（プラス）。\n"
                  f"Net=1000人あたり={r_1000}人")
     elif abs(net_sum_r) < 1e-9:
-        st.info(f"【Sheet3】全体としてほぼ変化なし（ニュートラル）の可能性。\n"
+        st.info(f"効果推定値r 全体としてほぼ変化なし（ニュートラル）の可能性。\n"
                 f"Net=1000人あたり={r_1000}人")
     else:
-        st.success(f"【Sheet3】全体として有益方向になる可能性があります（マイナス）。\n"
+        st.success(f"効果推定値r 全体として有益方向になる可能性があります（マイナス）。\n"
                    f"Net=1000人あたり={r_1000}人")
 
     # --- 3) Constraints
