@@ -26,8 +26,8 @@ def main():
         {"label": "脳卒中予防", "f": +1, "default_E":  0.10, "default_i": 100},
         {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i":  29},
         {"label": "めまい",   "f": -1, "default_E":  0.02, "default_i":   5},
-        {"label": "頻尿",     "f": -1, "default_E":  0.04, "default_i":   4},
-        {"label": "転倒",     "f": -1, "default_E":  0.06, "default_i":  13},
+        {"label": "頻尿",     "f": -1, "default_E":  -0.01, "default_i":   4},
+        {"label": "転倒",     "f": -1, "default_E":  -0.02, "default_i":  13},
     ]
 
     st.sidebar.header("① アウトカムの入力")
@@ -110,8 +110,8 @@ def show_results(user_data, cost_val, access_val, care_val):
 
         st.markdown(
             f"- **{label}**：E={E_val:.3f}, 重要度={i_val} "
-            f"<br>&emsp;Sheet2: {star_s} ( {nb_s:.4f} ) "
-            f"&emsp;Sheet3: {star_r} ( {nb_r:.4f} )",
+            f"<br>&emsp;効果推定値s: {star_s} ( {nb_s:.4f} ) "
+            f"&emsp;効果推定値r: {star_r} ( {nb_r:.4f} )",
             unsafe_allow_html=True
         )
 
@@ -125,10 +125,10 @@ def show_results(user_data, cost_val, access_val, care_val):
 
     st.markdown("### 合計正味の益")
     st.markdown(
-        f"- **Sheet2 (効果推定値s)**：Net = {net_sum_s:.4f} → 1000人あたり {score_s}人, {interpret_s}"
+        f"- **効果推定値s**：Net = {net_sum_s:.4f} → 1000人あたり {score_s}人, {interpret_s}"
     )
     st.markdown(
-        f"- **Sheet3 (効果推定値r)**：Net = {net_sum_r:.4f} → 1000人あたり {score_r}人, {interpret_r}"
+        f"- **効果推定値r**：Net = {net_sum_r:.4f} → 1000人あたり {score_r}人, {interpret_r}"
     )
 
     # Constraints
