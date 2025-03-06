@@ -1,7 +1,7 @@
 import streamlit as st
 
 def main():
-    st.title("正味の益計算：Sheet2 & Sheet3 両方式")
+    st.title("正味の益計算：効果推定値s & 効果推定値r 両方式")
 
     st.markdown(
         """
