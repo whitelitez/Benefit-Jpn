@@ -1,7 +1,7 @@
 import streamlit as st
 
 def main():
-    st.title("正味の益計算 プロトタイプ（カスタムスライダー範囲）")
+    st.title("正味の益計算 プロトタイプ（日本語カテゴリーによるリスク差スライダー）")
 
     st.markdown(
         """
@@ -11,81 +11,100 @@ def main():
         <p>
         <strong>概要：</strong><br>
         このアプリでは、各アウトカム（脳卒中予防・心不全予防・めまい・頻尿・転倒）に関する
-        <em>推定リスク差</em> と <em>重要度</em> を入力し、正味の益スコアを計算します。<br>
-        スライダーの範囲は下記のようにカスタマイズされています：
-        <ul>
-          <li>脳卒中予防 / 心不全予防：–0.10 ～ +0.10</li>
-          <li>めまい / 頻尿 / 転倒：–0.02 ～ +0.02</li>
-        </ul>
-        内部ロジックはエクセルでの計算式に準じています。
+        推定リスク差を「大きく悪化」「少し改善」などのカテゴリーから選択し、
+        さらにそれぞれの重要度（0～100）を入力して、正味の益スコアを計算します。<br>
+        内部では「合計した重要度で正規化する方式」に基づき、アウトカムごとの
+        ネット効果（E×F×重み）を合算しています。
         </p>
         """,
         unsafe_allow_html=True
     )
 
-    # アウトカムの定義（固定されたF値、初期E値、重要度など）
+    # --- Define categories for each outcome range ---
+
+    # -0.10..+0.10 in 9 steps
+    wide_categories = [
+        (-0.10, "大きく悪化"),
+        (-0.06, "やや悪化"),
+        (-0.03, "少し悪化"),
+        (-0.01, "わずかに悪化"),
+        ( 0.00, "ほぼ変化なし"),
+        ( 0.01, "わずかに改善"),
+        ( 0.03, "少し改善"),
+        ( 0.06, "やや改善"),
+        ( 0.10, "大きく改善")
+    ]
+
+    # -0.02..+0.02 in 5 steps
+    narrow_categories = [
+        (-0.02, "大きく悪化"),
+        (-0.01, "少し悪化"),
+        ( 0.00, "変化なし"),
+        ( 0.01, "少し改善"),
+        ( 0.02, "大きく改善")
+    ]
+
+    # For convenience, store each outcome’s categories + direction factor + default importance
     outcomes = [
         {
             "display_name": "脳卒中予防",
             "f":  1,
-            "default_e":  0.10,
-            "default_i": 100,
-            "min_e": -0.10,
-            "max_e":  0.10
+            "categories": wide_categories,
+            "default_label": "ほぼ変化なし",
+            "default_i": 100
         },
         {
             "display_name": "心不全予防",
             "f":  1,
-            "default_e": -0.10,
-            "default_i": 29,
-            "min_e": -0.10,
-            "max_e":  0.10
+            "categories": wide_categories,
+            "default_label": "やや悪化",  # e.g., pick something else
+            "default_i": 29
         },
         {
             "display_name": "めまい",
             "f": -1,
-            "default_e":  0.02,
-            "default_i":  5,
-            "min_e": -0.02,
-            "max_e":  0.02
+            "categories": narrow_categories,
+            "default_label": "大きく悪化",
+            "default_i": 5
         },
         {
             "display_name": "頻尿",
             "f": -1,
-            "default_e": -0.01,
-            "default_i":  4,
-            "min_e": -0.02,
-            "max_e":  0.02
+            "categories": narrow_categories,
+            "default_label": "少し悪化",
+            "default_i": 4
         },
         {
             "display_name": "転倒",
             "f": -1,
-            "default_e": -0.02,
-            "default_i": 13,
-            "min_e": -0.02,
-            "max_e":  0.02
+            "categories": narrow_categories,
+            "default_label": "少し悪化",
+            "default_i": 13
         },
     ]
 
-    # --------------------------
-    # サイドバー：アウトカムの入力
-    # --------------------------
-    st.sidebar.header("① アウトカムとその重要度の調整")
+    st.sidebar.header("① アウトカム別のリスク差と重要度の入力")
 
     user_data = []
     for item in outcomes:
         st.sidebar.subheader(item["display_name"])
 
-        e_val = st.sidebar.slider(
-            f"{item['display_name']}：推定リスク差",
-            min_value=item["min_e"],
-            max_value=item["max_e"],
-            value=float(item["default_e"]),
-            step=0.001
-        )
+        # Prepare text options from the category tuples
+        options_only_text = [cat[1] for cat in item["categories"]]
+        label_to_value = {cat[1]: cat[0] for cat in item["categories"]}
 
+        # select_slider for risk difference
+        selected_label = st.sidebar.select_slider(
+            f"{item['display_name']}：推定リスク差",
+            options=options_only_text,
+            value=item["default_label"]
+        )
+        # Map text back to float
+        e_val = label_to_value[selected_label]
+
+        # slider for importance 0..100
         i_val = st.sidebar.slider(
-            f"{item['display_name']}：重要度（0 = 重要ではない, 100 = 非常に重要）",
+            f"{item['display_name']}：重要度（0=重要ではない, 100=非常に重要）",
             min_value=0,
             max_value=100,
             value=item["default_i"],
@@ -99,12 +118,8 @@ def main():
             "i": i_val
         })
 
-    # --------------------------
-    # サイドバー：制約(Constraints)
-    # --------------------------
+    # Constraints
     st.sidebar.header("② 制約（Constraints）")
-    st.sidebar.write("各種制約レベルを選んでください：")
-
     constraint_options = ["問題なし", "やや問題", "大きな問題"]
     cost_label = st.sidebar.radio("費用面の問題", constraint_options, index=0)
     access_label = st.sidebar.radio("通院アクセスの問題", constraint_options, index=0)
@@ -114,7 +129,7 @@ def main():
     access_val = constraint_to_numeric(access_label)
     care_val = constraint_to_numeric(care_label)
 
-    # ボタン
+    # Calculate button
     if st.sidebar.button("正味の益を計算する"):
         show_results(user_data, cost_val, access_val, care_val)
 
@@ -122,34 +137,32 @@ def main():
 def show_results(user_data, cost_val, access_val, care_val):
     st.subheader("正味の益（Net Benefit）計算結果")
 
-    # 1) 重要度の合計
+    # Sum of importance
     total_i = sum(row["i"] for row in user_data)
     if abs(total_i) < 1e-9:
         st.error("すべてのアウトカムの重要度が0です。少なくとも1つは重要度を0より大きくしてください。")
         return
 
-    # 2) アウトカムごとの貢献度計算
     st.markdown("### 各アウトカムの詳細")
 
     k_values = []
     for row in user_data:
-        # Normalize importance by total
+        # Normalize importance
         w_k = row["i"] / total_i
-        # Net effect for this outcome
+        # Contribution to net benefit
         k_k = row["e"] * w_k * row["f"]
         k_values.append(k_k)
 
-        # Show star rating (color-coded by sign, # of stars by magnitude)
+        # Show color-coded stars based on net effect
         star_html = star_html_5(k_k)
+
         st.markdown(
             f"- <strong>{row['label']}</strong>: {star_html} "
-            f"(推定リスク差={row['e']:.3f}, 重要度={row['i']}, 貢献度={k_k:.4f})",
+            f"(リスク差={row['e']:.3f}, 重要度={row['i']}, 貢献度={k_k:.4f})",
             unsafe_allow_html=True
         )
 
-    # Sum net benefit
     net_sum = sum(k_values)
-    # Per 1000
     score_1000 = round(1000 * net_sum, 0)
 
     # Interpretation
@@ -162,11 +175,11 @@ def show_results(user_data, cost_val, access_val, care_val):
 
     st.markdown(
         f"**正味の益スコア（合計）**： {net_sum:.4f}<br>"
-        f"**1000人あたりの人数**： {score_1000:.0f}人",
+        f"**1000人あたりの人数**： {score_1000}人",
         unsafe_allow_html=True
     )
 
-    # Constraints section
+    # Constraints
     st.subheader("制約（Constraints）の状況")
     constraint_total = cost_val + access_val + care_val
     if constraint_total == 0:
@@ -221,24 +234,13 @@ def numeric_to_constraint_label(value):
 
 def star_html_5(net_effect):
     """
-    Return a string of up to 5 colored stars:
-      - GREEN stars if net_effect > 0
-      - RED stars if net_effect < 0
-      - Gray dash if ~0
-    The magnitude (absolute value) determines how many stars.
-
-    Adjust these thresholds as desired. For example:
-    - < 0.0005 => 0 stars
-    - < 0.001  => 1 star
-    - < 0.002  => 2 stars
-    - < 0.004  => 3 stars
-    - < 0.008  => 4 stars
-    - else     => 5 stars
+    最大5つの星を表示し、net_effect>0なら緑色、net_effect<0なら赤色。
+    絶対値が大きいほど星が多い。
+    しきい値は例として設定しているので、適宜調整してください。
     """
-
     abs_val = abs(net_effect)
 
-    # Fine-grained thresholds for small values
+    # Example thresholds
     if abs_val < 0.0005:
         star_count = 0
     elif abs_val < 0.001:
@@ -252,23 +254,18 @@ def star_html_5(net_effect):
     else:
         star_count = 5
 
-    # If star_count=0, show dash
     if star_count == 0:
         return "<span style='color:gray;font-size:18px;'>—</span>"
 
-    # Color depends on sign
     star_color = "green" if net_effect > 0 else "red"
-
-    star_html = ""
+    stars = ""
     for i in range(star_count):
-        star_html += f"<span style='color:{star_color};font-size:18px;'>★</span>"
+        stars += f"<span style='color:{star_color};font-size:18px;'>★</span>"
+    # Optional: fill remaining up to 5 with lightgray
+    for i in range(5 - star_count):
+        stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
 
-    # If you want to show "empty" stars in gray up to 5, uncomment below:
-    remainder = 5 - star_count
-    for i in range(remainder):
-        star_html += "<span style='color:lightgray;font-size:18px;'>★</span>"
-
-    return star_html
+    return stars
 
 
 if __name__ == "__main__":
