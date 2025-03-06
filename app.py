@@ -81,7 +81,7 @@ def show_results(user_data, cost_val, access_val, care_val):
     net_sum_s = 0.0
     net_sum_r = 0.0
 
-    st.markdown("### 各アウトカムの詳細 (Sheet2 & Sheet3)")
+    st.markdown("### 各アウトカムの詳細 (効果推定値s & 効果推定値r)")
 
     for d in user_data:
         label = d["label"]
