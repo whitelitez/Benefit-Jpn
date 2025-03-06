@@ -1,91 +1,45 @@
 import streamlit as st
 
 def main():
-    st.title("正味の益計算 プロトタイプ（カスタムスライダー範囲）")
+    st.title("正味の益計算：Sheet2 & Sheet3（2方式）＋色付きメッセージ")
 
     st.markdown(
         """
         <p style='color:red; font-weight:bold;'>
-        （日本語版：セル参照などの技術的表記は非表示）
+        （日本語版：効果推定値s & 効果推定値r 両方計算＋色付き結果表示）
         </p>
         <p>
-        <strong>概要：</strong><br>
-        このアプリでは、各アウトカム（脳卒中予防・心不全予防・めまい・頻尿・転倒）に関する
-        <em>推定リスク差</em> と <em>重要度</em> を入力し、正味の益スコアを計算します。<br>
-        スライダーの範囲は下記のようにカスタマイズされています：
-        <ul>
-          <li>脳卒中予防 / 心不全予防：–0.10 ～ +0.10</li>
-          <li>めまい / 頻尿 / 転倒：–0.02 ～ +0.02</li>
-        </ul>
-        内部ロジックはエクセルでの計算式に準じています。
+        - リスク差 (E) は数値入力またはスライダーでも可。<br>
+        - 重要度 (i) は 0～100 スライダー。<br>
+        - Sheet2 = 合計重要度で正規化 ( E × (i / Σi) × f )<br>
+        - Sheet3 = 最重要100基準 ( E × (i / 100) × f )<br>
+        - 最終的に両方式それぞれの結果を解釈し、正 (プラス方向) なら赤枠、負 (マイナス方向) なら緑枠、ほぼ 0 なら青枠で表示。
         </p>
         """,
         unsafe_allow_html=True
     )
 
-    # アウトカムの定義（固定されたf値、初期E値、重要度など）
+    # Define outcomes
     outcomes = [
-        {
-            "display_name": "脳卒中予防",
-            "f":  1,
-            "default_e":  0.10,
-            "default_i": 100,
-            "min_e": -0.10,
-            "max_e":  0.10
-        },
-        {
-            "display_name": "心不全予防",
-            "f":  1,
-            "default_e": -0.10,
-            "default_i": 29,
-            "min_e": -0.10,
-            "max_e":  0.10
-        },
-        {
-            "display_name": "めまい",
-            "f": -1,
-            "default_e":  0.02,
-            "default_i":  5,
-            "min_e": -0.02,
-            "max_e":  0.02
-        },
-        {
-            "display_name": "頻尿",
-            "f": -1,
-            "default_e": -0.01,
-            "default_i":  4,
-            "min_e": -0.02,
-            "max_e":  0.02
-        },
-        {
-            "display_name": "転倒",
-            "f": -1,
-            "default_e": -0.02,
-            "default_i": 13,
-            "min_e": -0.02,
-            "max_e":  0.02
-        },
+        {"label": "脳卒中予防", "f": +1, "default_e":  0.10, "default_i": 100},
+        {"label": "心不全予防", "f": +1, "default_e": -0.10, "default_i": 29},
+        {"label": "めまい",   "f": -1, "default_e":  0.02, "default_i":  5},
+        {"label": "頻尿",     "f": -1, "default_e":  0.04, "default_i":  4},
+        {"label": "転倒",     "f": -1, "default_e":  0.06, "default_i": 13},
     ]
 
-    # --------------------------
-    # サイドバー：アウトカムの入力
-    # --------------------------
-    st.sidebar.header("① アウトカムとその重要度の調整")
-
+    st.sidebar.header("① アウトカムの入力")
     user_data = []
     for item in outcomes:
-        st.sidebar.subheader(item["display_name"])
-
-        e_val = st.sidebar.slider(
-            f"{item['display_name']}：推定リスク差",
-            min_value=item["min_e"],
-            max_value=item["max_e"],
+        st.sidebar.subheader(item["label"])
+        E_val = st.sidebar.number_input(
+            f"{item['label']}：リスク差 E",
             value=float(item["default_e"]),
-            step=0.001
+            step=0.01,
+            format="%.3f"
         )
-
         i_val = st.sidebar.slider(
-            f"{item['display_name']}：重要度（0 = 重要ではない, 100 = 非常に重要）",
+            f"{item['label']}：重要度 (0=重要でない, 100=非常に重要)",
             min_value=0,
             max_value=100,
             value=item["default_i"],
@@ -93,18 +47,13 @@ def main():
         )
 
         user_data.append({
-            "label": item["display_name"],
-            "f": item["f"],
-            "e": e_val,
-            "i": i_val
+            "label": item["label"],
+            "f":     item["f"],
+            "E":     E_val,
+            "i":     i_val,
         })
 
-    # --------------------------
-    # サイドバー：制約(Constraints)
-    # --------------------------
     st.sidebar.header("② 制約（Constraints）")
-    st.sidebar.write("各種制約レベルを選んでください：")
-
     constraint_options = ["問題なし", "やや問題", "大きな問題"]
     cost_label = st.sidebar.radio("費用面の問題", constraint_options, index=0)
     access_label = st.sidebar.radio("通院アクセスの問題", constraint_options, index=0)
@@ -114,60 +63,65 @@ def main():
     access_val = constraint_to_numeric(access_label)
     care_val = constraint_to_numeric(care_label)
 
-    # ボタン
+    # Button
     if st.sidebar.button("正味の益を計算する"):
         show_results(user_data, cost_val, access_val, care_val)
 
 
 def show_results(user_data, cost_val, access_val, care_val):
+    """Compute and display results for both Sheet2 & Sheet3, with color-coded messages."""
     st.subheader("正味の益（Net Benefit）計算結果")
 
-    # 1) 重要度の合計
-    total_i = sum(row["i"] for row in user_data)
-    if abs(total_i) < 1e-9:
-        st.error("すべてのアウトカムの重要度が0です。少なくとも1つは重要度を0より大きくしてください。")
-        return
+    # 1) Sheet2 => sum-based weighting
+    net_s, details_s = compute_sheet2(user_data)
 
-    # 2) アウトカムごとの貢献度計算
-    st.markdown("### 各アウトカムの詳細")
+    # 2) Sheet3 => ratio-to-100 weighting
+    net_r, details_r = compute_sheet3(user_data)
 
-    k_values = []
-    for row in user_data:
-        # Normalize importance by total
-        w_k = row["i"] / total_i
-        # Net effect
-        k_k = row["e"] * w_k * row["f"]
-        k_values.append(k_k)
+    st.markdown("### 各アウトカムの貢献度比較")
+    for row_s, row_r in zip(details_s, details_r):
+        # They should match the same outcome index
+        label = row_s["label"]
+        E_val = row_s["E"]
+        i_val = row_s["i"]
 
-        # Show star rating (color-coded by sign, # of stars by magnitude)
-        star_html = star_html_5(k_k)
+        nb_s = row_s["contribution"]  # sheet2 net effect
+        nb_r = row_r["contribution"]  # sheet3 net effect
+
         st.markdown(
-            f"- <strong>{row['label']}</strong>: {star_html} "
-            f"(推定リスク差={row['e']:.3f}, 重要度={row['i']}, 貢献度={k_k:.4f})",
+            f"- **{label}**：E={E_val:.3f}, i={i_val} "
+            f"<br>&emsp;Sheet2貢献度: {nb_s:.4f}, "
+            f"Sheet3貢献度: {nb_r:.4f}",
             unsafe_allow_html=True
         )
 
-    # Net benefit sum
-    net_sum = sum(k_values)
-    # Per 1000
-    score_1000 = round(1000 * net_sum, 0)
+    # Convert net sums to per 1000
+    score_s = round(net_s * 1000, 0)
+    score_r = round(net_r * 1000, 0)
 
-    # Interpretation with color-coded message
-    if net_sum > 0:
-        # Red box
-        st.error("全体として有害方向になる可能性があります（プラス方向）。")
-    elif abs(net_sum) < 1e-9:
-        # Blue box
-        st.info("全体としてほぼ変化がない（ニュートラル）可能性があります。")
+    st.markdown("### 合計正味の益")
+
+    # --- Sheet2 interpretation ---
+    if net_s > 0:
+        st.error(f"【Sheet2】全体として有害方向になる可能性があります（プラス）。\n"
+                 f"Net={net_s:.4f}, 1000人あたり={score_s:.0f}人")
+    elif abs(net_s) < 1e-9:
+        st.info(f"【Sheet2】ほぼ変化なし（ニュートラル）の可能性。\n"
+                f"Net={net_s:.4f}, 1000人あたり={score_s:.0f}人")
     else:
-        # Green box
-        st.success("全体として有益方向になる可能性があります（マイナス方向）。")
+        st.success(f"【Sheet2】全体として有益方向になる可能性があります（マイナス）。\n"
+                   f"Net={net_s:.4f}, 1000人あたり={score_s:.0f}人")
 
-    st.markdown(
-        f"**正味の益スコア（合計）**： {net_sum:.4f}<br>"
-        f"**1000人あたりの人数**： {score_1000:.0f}人",
-        unsafe_allow_html=True
-    )
+    # --- Sheet3 interpretation ---
+    if net_r > 0:
+        st.error(f"【Sheet3】全体として有害方向になる可能性があります（プラス）。\n"
+                 f"Net={net_r:.4f}, 1000人あたり={score_r:.0f}人")
+    elif abs(net_r) < 1e-9:
+        st.info(f"【Sheet3】ほぼ変化なし（ニュートラル）の可能性。\n"
+                f"Net={net_r:.4f}, 1000人あたり={score_r:.0f}人")
+    else:
+        st.success(f"【Sheet3】全体として有益方向になる可能性があります（マイナス）。\n"
+                   f"Net={net_r:.4f}, 1000人あたり={score_r:.0f}人")
 
     # Constraints
     st.subheader("制約（Constraints）の状況")
@@ -185,25 +139,59 @@ def show_results(user_data, cost_val, access_val, care_val):
     st.write(f"- アクセス面：**{numeric_to_constraint_label(access_val)}**")
     st.write(f"- 介助面：**{numeric_to_constraint_label(care_val)}**")
 
-    # Placeholder
-    st.subheader("その他の高度な解析（Placeholder）")
-    st.markdown(
-        """
-        <p style='color:red; font-weight:bold;'>
-        （本番環境では非表示）
-        </p>
-        <ul>
-          <li>相関や高度な加重（AHP, DCE）を取り入れた計算</li>
-          <li>信頼区間を考慮した確率的アプローチ</li>
-          <li>有益・有害アウトカムの整理や図表化</li>
-        </ul>
-        """,
-        unsafe_allow_html=True
-    )
+
+# --------------------------
+# Sheet2 / Sheet3 Functions
+# --------------------------
+
+def compute_sheet2(user_data):
+    """
+    Sheet2: "Sum-based weighting"
+      net = sum( (i_k / sum_i) * E_k * f_k )
+    """
+    total_i = sum(d["i"] for d in user_data)
+    if abs(total_i) < 1e-9:
+        return (0.0, [])
+
+    details = []
+    net_sum = 0.0
+    for d in user_data:
+        w_s = d["i"] / total_i
+        contrib = d["E"] * w_s * d["f"]
+        net_sum += contrib
+        details.append({
+            "label": d["label"],
+            "E":     d["E"],
+            "i":     d["i"],
+            "contribution": contrib
+        })
+
+    return (net_sum, details)
+
+def compute_sheet3(user_data):
+    """
+    Sheet3: "Ratio-to-100 weighting"
+      net = sum( (i_k / 100) * E_k * f_k )
+    """
+    details = []
+    net_sum = 0.0
+    for d in user_data:
+        w_r = d["i"] / 100.0
+        contrib = d["E"] * w_r * d["f"]
+        net_sum += contrib
+        details.append({
+            "label": d["label"],
+            "E":     d["E"],
+            "i":     d["i"],
+            "contribution": contrib
+        })
+
+    return (net_sum, details)
 
 
-# ---------------- HELPER FUNCTIONS ----------------
-
+# --------------------------
+# Constraints Helper
+# --------------------------
 def constraint_to_numeric(label):
     """制約レベルを数値に変換"""
     if label == "問題なし":
@@ -222,53 +210,9 @@ def numeric_to_constraint_label(value):
     else:
         return "大きな問題"
 
-def star_html_5(net_effect):
-    """
-    Return a string of up to 5 colored stars:
-      - GREEN stars if net_effect > 0
-      - RED stars if net_effect < 0
-      - Gray dash if ~0
-    The magnitude (absolute value) determines how many stars.
 
-    Adjust these thresholds as desired. For example:
-    - < 0.0005 => 0 stars
-    - < 0.001  => 1 star
-    - < 0.002  => 2 stars
-    - < 0.004  => 3 stars
-    - < 0.008  => 4 stars
-    - else     => 5 stars
-    """
-    abs_val = abs(net_effect)
-
-    if abs_val < 0.0005:
-        # Show dash for near-zero
-        return "<span style='color:gray;font-size:18px;'>—</span>"
-
-    # Decide star_count
-    if abs_val < 0.001:
-        star_count = 1
-    elif abs_val < 0.002:
-        star_count = 2
-    elif abs_val < 0.004:
-        star_count = 3
-    elif abs_val < 0.008:
-        star_count = 4
-    else:
-        star_count = 5
-
-    # If net_effect > 0 => green, net_effect < 0 => red
-    star_color = "green" if net_effect > 0 else "red"
-
-    stars = ""
-    for _ in range(star_count):
-        stars += f"<span style='color:{star_color};font-size:18px;'>★</span>"
-
-    # Fill the remainder (up to 5) with lightgray
-    for _ in range(5 - star_count):
-        stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
-
-    return stars
-
-
+# --------------------------
+# Main
+# --------------------------
 if __name__ == "__main__":
     main()
