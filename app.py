@@ -1,60 +1,36 @@
 import streamlit as st
 
 def main():
-    st.title("正味の益計算：Sheet2 & Sheet3 両方式（シンプル版）")
+    st.title("正味の益計算：Sheet2 & Sheet3 両方式")
 
     st.markdown(
         """
         <p style='color:red; font-weight:bold;'>
-        （日本語版：簡易実装例）
+        （日本語版：アローなし・人は整数表示・正負で星色を変える）
         </p>
         <p>
-        このアプリは下記を行います：<br>
-        1. 各アウトカムについて、リスク差(E)を数値入力（小数OK）し、重要度(i)をスライダーで入力。<br>
-        2. 効果推定値s (Sheet2)の式：\\( E \\times \\frac{i}{\\sum i} \\times f \\) と、
-           効果推定値r (Sheet3)の式：\\( E \\times \\frac{i}{100} \\times f \\) を両方計算。<br>
-        3. 各アウトカムの重要度を3段階の星(★)で表示し、リスク差\\(\\times f\\) の方向を矢印(⬆,⬇,➡)で表示。<br>
-        4. 最後に「正味の益」の合計値を2種類それぞれ算出し、1000人あたりの人数として表示します。<br>
+        このアプリは下記を行います：
+        <ul>
+          <li>各アウトカムでリスク差(E)を数値入力、重要度(i)をスライダー(0～100)で入力</li>
+          <li>効果推定値s (Sheet2)と効果推定値r (Sheet3)を計算し、正味の益を2種類出す</li>
+          <li>星マーク(最大3)で、正か負かによって色を変えて表示（正⇒緑、負⇒赤、ほぼ0⇒灰色ダッシュ）</li>
+          <li>1000人あたりの結果は整数で表示 (小数点なし)</li>
+        </ul>
         </p>
         """,
         unsafe_allow_html=True
     )
 
-    # Define outcomes: label, direction factor f, default risk diff, default importance
+    # Define outcomes
     outcomes = [
-        {
-            "label": "脳卒中予防",
-            "f": +1,
-            "default_E": 0.10,
-            "default_i": 100,
-        },
-        {
-            "label": "心不全予防",
-            "f": +1,
-            "default_E": -0.10,
-            "default_i": 29,
-        },
-        {
-            "label": "めまい",
-            "f": -1,
-            "default_E": 0.02,
-            "default_i": 5,
-        },
-        {
-            "label": "頻尿",
-            "f": -1,
-            "default_E": 0.04,
-            "default_i": 4,
-        },
-        {
-            "label": "転倒",
-            "f": -1,
-            "default_E": 0.06,
-            "default_i": 13,
-        },
+        {"label": "脳卒中予防", "f": +1, "default_E":  0.10, "default_i": 100},
+        {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i":  29},
+        {"label": "めまい",   "f": -1, "default_E":  0.02, "default_i":   5},
+        {"label": "頻尿",     "f": -1, "default_E":  0.04, "default_i":   4},
+        {"label": "転倒",     "f": -1, "default_E":  0.06, "default_i":  13},
     ]
 
-    st.sidebar.header("① 各アウトカムの入力")
+    st.sidebar.header("① アウトカムの入力")
 
     user_data = []
     for item in outcomes:
@@ -67,7 +43,7 @@ def main():
             step=0.01,
             format="%.3f"
         )
-        # Slider for importance
+        # Slider for importance i
         i_val = st.sidebar.slider(
             f"{item['label']}：重要度 (0=重要でない, 100=非常に重要)",
             min_value=0,
@@ -94,7 +70,7 @@ def main():
     access_val = constraint_to_numeric(access_label)
     care_val = constraint_to_numeric(care_label)
 
-    # Button
+    # Button to compute
     if st.sidebar.button("正味の益を計算する"):
         show_results(user_data, cost_val, access_val, care_val)
 
@@ -102,55 +78,52 @@ def main():
 def show_results(user_data, cost_val, access_val, care_val):
     st.subheader("正味の益（Net Benefit）計算結果")
 
-    # 1) Calculate sum of importance
-    total_importance = sum(d["i"] for d in user_data)
-    if total_importance == 0:
-        st.error("重要度がすべて0のため計算できません。少なくとも1つは重要度を大きくしてください。")
+    # 1) sum of importance for Sheet2
+    total_i = sum(d["i"] for d in user_data)
+    if abs(total_i) < 1e-9:
+        st.error("重要度がすべて0のため計算できません。少なくとも1つは重要度を上げてください。")
         return
 
-    # 2) We'll accumulate net sums for both methods
-    net_sum_s = 0.0  # Sheet2
-    net_sum_r = 0.0  # Sheet3
+    # 2) We'll calculate net sums for both Sheet2 & Sheet3
+    net_sum_s = 0.0
+    net_sum_r = 0.0
 
+    # Show outcome-level details
     st.markdown("### 各アウトカムの詳細")
     for d in user_data:
         label = d["label"]
+        f_val = d["f"]
         E_val = d["E"]
         i_val = d["i"]
-        f_val = d["f"]
 
-        # Importance star rating (just reusing original logic)
-        stars = star_html_3(i_val)
-
-        # Arrows for the sign of (E*f) — same for s/r, since E is the same
-        arrow = get_arrow(E_val * f_val)
-
-        # Net effect for Sheet2
-        w_s = (i_val / total_importance) if total_importance != 0 else 0
+        # Sheet2: net effect
+        w_s = i_val / total_i if total_i != 0 else 0
         nb_s = E_val * w_s * f_val
         net_sum_s += nb_s
+        star_s = star_html_3_net(nb_s)
 
-        # Net effect for Sheet3
-        w_r = (i_val / 100.0)
+        # Sheet3: net effect
+        w_r = i_val / 100.0
         nb_r = E_val * w_r * f_val
         net_sum_r += nb_r
+        star_r = star_html_3_net(nb_r)
 
         st.markdown(
-            f"- **{label}**: {stars} (重要度={i_val}), リスク差={E_val:.3f} → {arrow} "
-            f"<br>&emsp; [Sheet2 貢献度: {nb_s:.4f}] "
-            f"&emsp; [Sheet3 貢献度: {nb_r:.4f}]",
+            f"- **{label}**：E={E_val:.3f}, 重要度={i_val} "
+            f"<br>&emsp;Sheet2: {star_s} ( {nb_s:.4f} ) "
+            f"&emsp;Sheet3: {star_r} ( {nb_r:.4f} )",
             unsafe_allow_html=True
         )
 
     # 3) Convert net sums to per 1000
-    score_s = round(net_sum_s * 1000, 1)
-    score_r = round(net_sum_r * 1000, 1)
+    score_s = int(round(net_sum_s * 1000, 0))  # integer
+    score_r = int(round(net_sum_r * 1000, 0))  # integer
 
-    # 4) Interpretation
+    # 4) Interpret sign
     interpret_s = interpret_net_benefit(net_sum_s)
     interpret_r = interpret_net_benefit(net_sum_r)
 
-    st.markdown("### 正味の益：合計")
+    st.markdown("### 合計正味の益")
     st.markdown(
         f"- **Sheet2 (効果推定値s)**：Net = {net_sum_s:.4f} → 1000人あたり {score_s}人, {interpret_s}"
     )
@@ -175,9 +148,9 @@ def show_results(user_data, cost_val, access_val, care_val):
     st.write(f"- 介助面：**{numeric_to_constraint_label(care_val)}**")
 
 
-# --------------------------
-# Helper functions
-# --------------------------
+# ---------------------
+# Helper Functions
+# ---------------------
 
 def constraint_to_numeric(label):
     """制約レベルを数値に変換"""
@@ -197,50 +170,11 @@ def numeric_to_constraint_label(value):
     else:
         return "大きな問題"
 
-def get_arrow(value):
-    """
-    Original arrow function for sign:
-      >0.05 = up, < -0.05 = down, else right
-    """
-    if value > 0.05:
-        return "⬆️"
-    elif value < -0.05:
-        return "⬇️"
-    else:
-        return "➡️"
-
-def star_html_3(importance_0to100):
-    """
-    Original star function (importance-based):
-      0..33 => 1 star
-      34..66 => 2 stars
-      67..100 => 3 stars
-      If importance=0 => show no star or dash
-    """
-    if importance_0to100 == 0:
-        return "<span style='color:lightgray;'>—</span>"
-
-    if importance_0to100 <= 33:
-        filled = 1
-    elif importance_0to100 <= 66:
-        filled = 2
-    else:
-        filled = 3
-
-    stars = ""
-    for i in range(3):
-        if i < filled:
-            stars += "<span style='color:gold;font-size:18px;'>★</span>"
-        else:
-            stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
-    return stars
-
 def interpret_net_benefit(value):
     """
-    Original logic:
-      >0 => 有害方向
-      ~0 => ニュートラル
-      <0 => 有益方向
+    Positive => 有害方向
+    Negative => 有益方向
+    ~0 => ニュートラル
     """
     if value > 0:
         return "有害方向 (プラス)"
@@ -248,6 +182,41 @@ def interpret_net_benefit(value):
         return "ほぼ変化なし (ニュートラル)"
     else:
         return "有益方向 (マイナス)"
+
+def star_html_3_net(net_effect):
+    """
+    Show up to 3 stars based on absolute magnitude of net_effect.
+    - If net_effect > 0 => green stars
+    - If net_effect < 0 => red stars
+    - If ~0 => gray dash
+    Thresholds (example):
+      < 0.01 => 1 star
+      < 0.03 => 2 stars
+      else   => 3 stars
+    """
+    val = abs(net_effect)
+    if val < 1e-9:
+        # basically zero
+        return "<span style='color:gray;font-size:18px;'>—</span>"
+
+    if val < 0.01:
+        star_count = 1
+    elif val < 0.03:
+        star_count = 2
+    else:
+        star_count = 3
+
+    # Color
+    star_color = "green" if net_effect > 0 else "red"
+
+    stars = ""
+    for i in range(star_count):
+        stars += f"<span style='color:{star_color};font-size:18px;'>★</span>"
+    # Fill up to 3 with lightgray
+    for i in range(3 - star_count):
+        stars += "<span style='color:lightgray;font-size:18px;'>★</span>"
+
+    return stars
 
 
 if __name__ == "__main__":
