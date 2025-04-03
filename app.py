@@ -2,16 +2,26 @@ import streamlit as st
 
 def profile_page():
     st.title("ユーザープロファイル")
-    st.markdown("**年齢** と **性別** を入力してください。")
-    
+    st.markdown("**年齢** と **性別** と **都道府県** を入力してください。")
+
     # Collect user profile information.
     age = st.number_input("年齢", min_value=0, max_value=120, value=25)
     gender = st.selectbox("性別", ["男性", "女性", "その他"])
+    
+    # Example list of prefectures — expand or modify as needed.
+    prefectures = [
+        "北海道", "青森県", "岩手県", "宮城県", "秋田県", 
+        "山形県", "福島県", "茨城県", "栃木県", "群馬県",
+        "埼玉県", "千葉県", "東京都", "神奈川県"
+        # ... 以降追加 ...
+    ]
+    prefecture = st.selectbox("都道府県", prefectures)
     
     if st.button("次へ"):
         # Save the profile data and a flag to indicate profile completion.
         st.session_state.age = age
         st.session_state.gender = gender
+        st.session_state.prefecture = prefecture
         st.session_state.profile_complete = True  # Flag for profile completion
 
 def main():
@@ -19,10 +29,13 @@ def main():
     if not st.session_state.get("profile_complete", False):
         profile_page()
         return  # Stop execution until profile data is provided.
-    
+
     # Display user profile information in the sidebar.
-    st.sidebar.write(f"ユーザー情報: 年齢 = {st.session_state.age}, 性別 = {st.session_state.gender}")
-    
+    st.sidebar.write(f"ユーザー情報:")
+    st.sidebar.write(f"・年齢 = {st.session_state.age}")
+    st.sidebar.write(f"・性別 = {st.session_state.gender}")
+    st.sidebar.write(f"・都道府県 = {st.session_state.prefecture}")
+
     st.title("正味の益計算：効果推定値s & 効果推定値r + スター表示 + カラー解釈")
     st.markdown(
         """
