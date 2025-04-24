@@ -41,23 +41,22 @@ def numeric_to_constraint_label(value):
         return "重視する"
 
 
-def star_html_5(net_effect, E):
+def star_html_5(net_effect):
     abs_val = abs(net_effect)
     if abs_val < 1e-9:
         return "<span style='color:gray;font-size:18px;'>—</span>"
-    # … compute star_count …
-    star_color = "green" if E < 0 else "red"        
-    if abs_val < 0.01:
-        star_count = 1
-    elif abs_val < 0.03:
-        star_count = 2
-    elif abs_val < 0.06:
-        star_count = 3
-    elif abs_val < 0.10:
-        star_count = 4
-    else:
-        star_count = 5
-    star_color = "green" if E < 0 else "red"
+
+    # 1–5 stars based on magnitude only
+    if   abs_val < 0.01: star_count = 1
+    elif abs_val < 0.03: star_count = 2
+    elif abs_val < 0.06: star_count = 3
+    elif abs_val < 0.10: star_count = 4
+    else:                star_count = 5
+
+    # **ONLY** flip on the sign of net_effect
+    star_color = "green" if net_effect < 0 else "red"
+
+    # render
     result = ""
     for _ in range(star_count):
         result += f"<span style='color:{star_color};font-size:18px;'>★</span>"
