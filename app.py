@@ -57,7 +57,7 @@ def star_html_5(net_effect, E):
         star_count = 4
     else:
         star_count = 5
-    star_color = "green" if original_E < 0 else "red"
+    star_color = "green" if E < 0 else "red"
     result = ""
     for _ in range(star_count):
         result += f"<span style='color:{star_color};font-size:18px;'>★</span>"
