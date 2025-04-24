@@ -85,12 +85,12 @@ def show_results(user_data, cost_val, access_val, care_val):
         w_s = i_val / total_i
         nb_s = E_val * w_s * f_val
         net_sum_s += nb_s
-        star_s = star_html_5(nb_s, E_val)
+        star_s = star_html_5(nb_s)
         # Sheet3 calculation
         w_r = i_val / 100.0
         nb_r = E_val * w_r * f_val
         net_sum_r += nb_r
-        star_r = star_html_5(nb_r, E_val)
+        star_r = star_html_5(nb_r)
         st.markdown(
             f"- **{label}**: E={E_val:.3f}, i={i_val}<br>"
             f"&emsp;**効果推定値s**: {star_s} ( {nb_s:.4f} )  "
