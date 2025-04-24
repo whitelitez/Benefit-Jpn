@@ -41,10 +41,12 @@ def numeric_to_constraint_label(value):
         return "重視する"
 
 
-def star_html_5(net_effect):
+def star_html_5(net_effect, E):
     abs_val = abs(net_effect)
     if abs_val < 1e-9:
         return "<span style='color:gray;font-size:18px;'>—</span>"
+    # … compute star_count …
+    star_color = "green" if E < 0 else "red"        
     if abs_val < 0.01:
         star_count = 1
     elif abs_val < 0.03:
@@ -55,7 +57,7 @@ def star_html_5(net_effect):
         star_count = 4
     else:
         star_count = 5
-    star_color = "green" if net_effect < 0 else "red"
+    star_color = "green" if original_E < 0 else "red"
     result = ""
     for _ in range(star_count):
         result += f"<span style='color:{star_color};font-size:18px;'>★</span>"
@@ -84,12 +86,12 @@ def show_results(user_data, cost_val, access_val, care_val):
         w_s = i_val / total_i
         nb_s = E_val * w_s * f_val
         net_sum_s += nb_s
-        star_s = star_html_5(nb_s)
+        star_s = star_html_5(nb_s, E_val)
         # Sheet3 calculation
         w_r = i_val / 100.0
         nb_r = E_val * w_r * f_val
         net_sum_r += nb_r
-        star_r = star_html_5(nb_r)
+        star_r = star_html_5(nb_r, E_val)
         st.markdown(
             f"- **{label}**: E={E_val:.3f}, i={i_val}<br>"
             f"&emsp;**効果推定値s**: {star_s} ( {nb_s:.4f} )  "
