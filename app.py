@@ -56,7 +56,7 @@ def main():
     
     # Define outcomes for the calculation.
     # Define your 5 static outcomes
-outcomes = [
+    outcomes = [
     {"label": "脳卒中予防", "f": +1, "default_E": 0.10, "default_i": 100},
     {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i":  29},
     {"label": "めまい",     "f": -1, "default_E":  0.02, "default_i":   5},
