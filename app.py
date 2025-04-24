@@ -163,18 +163,18 @@ def show_results(user_data, cost_val, access_val, care_val):
         st.success(f"効果推定値r 全体として有益方向になる可能性があります（マイナス）。\n"
                    f"Net=1000人あたり={r_1000}人")
     
-    # --- 3) Constraints.
+    # --- 3) Constraints の状況（最悪ケースのみ）
     st.subheader("制約（Constraints）の状況")
-    constraint_total = cost_val + access_val + care_val
-    if constraint_total == 0:
-        st.success("大きな制約は見当たりません。導入しやすい状況です。")
-    elif constraint_total <= 1:
-        st.info("多少の制約はありますが、比較的対応できそうです。")
-    elif constraint_total <= 2:
-        st.warning("複数の制約が見られます。追加のサポートや対策を検討してください。")
-    else:
-        st.error("費用・通院アクセス・介助面など、ご不便をおかけする可能性があります。慎重な検討が必要です。")
-    
+    max_sev = max(cost_val, access_val, care_val)
+
+    if max_sev == 0.0:
+        st.success("制約：すべて問題なし（緑）")
+    elif max_sev == 0.5:
+        st.warning("制約：懸念ありの項目があります（黄）")
+    else:  # max_sev == 1.0
+        st.error("制約：問題ありの項目があります（赤）")
+
+    # それぞれのラベル表示はそのまま
     st.write(f"- 費用面: **{numeric_to_constraint_label(cost_val)}**")
     st.write(f"- アクセス面: **{numeric_to_constraint_label(access_val)}**")
     st.write(f"- 介助面: **{numeric_to_constraint_label(care_val)}**")
