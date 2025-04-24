@@ -55,63 +55,37 @@ def main():
     )
     
     # Define outcomes for the calculation.
+    outcomes = [
+        {"label": "脳卒中予防", "f": +1, "default_E":  0.10, "default_i": 100},
+        {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i":  29},
+        {"label": "めまい",   "f": -1, "default_E":  0.02, "default_i":   5},
+        {"label": "頻尿",     "f": -1, "default_E": -0.01, "default_i":   4},
+        {"label": "転倒",     "f": -1, "default_E": -0.02, "default_i":  13},
+    ]
+    
     st.sidebar.header("① アウトカムの入力")
-
-# 1) Ask user how many extra (custom) outcomes to include (0–2)
-extra_count = st.sidebar.number_input(
-    "追加アウトカム数（最大2）", min_value=0, max_value=2, value=0, step=1
-)
-
-# 2) Start with your 5 static outcomes
-outcomes = [
-    {"label": "脳卒中予防", "f": +1, "default_E": 0.10, "default_i": 100},
-    {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i":  29},
-    {"label": "めまい",     "f": -1, "default_E":  0.02, "default_i":   5},
-    {"label": "頻尿",       "f": -1, "default_E": -0.01, "default_i":   4},
-    {"label": "転倒",       "f": -1, "default_E": -0.02, "default_i":  13},
-]
-
-# 3) Append up to two custom outcomes
-for idx in range(extra_count):
-    st.sidebar.markdown(f"**Custom Outcome {idx+1}**")
-    label = st.sidebar.text_input(f"Label", key=f"custom_label_{idx}") or f"Custom{idx+1}"
-    f_val = st.sidebar.selectbox(
-        "Direction (f)", [+1, -1],
-        format_func=lambda x: "Positive→+1" if x==+1 else "Negative→-1",
-        key=f"custom_f_{idx}"
-    )
-    E_def = st.sidebar.number_input(
-        "Default E", value=0.0, step=0.01, format="%.3f", key=f"custom_E_{idx}"
-    )
-    i_def = st.sidebar.slider(
-        "Default i (0–100)", 0, 100, 50, step=1, key=f"custom_i_{idx}"
-    )
-    outcomes.append({
-        "label": label, "f": f_val,
-        "default_E": E_def, "default_i": i_def
-    })
-
-# 4) Now render inputs for every outcome in the list
-user_data = []
-for item in outcomes:
-    st.sidebar.subheader(item["label"])
-    E_val = st.sidebar.number_input(
-        f"{item['label']}：リスク差 (E)",
-        value=float(item["default_E"]), step=0.01, format="%.3f",
-        key=f"E_{item['label']}"
-    )
-    i_val = st.sidebar.slider(
-        f"{item['label']}：重要度",
-        0, 100, item["default_i"], 1,
-        key=f"i_{item['label']}"
-    )
-    user_data.append({
-        "label": item["label"],
-        "f": item["f"],
-        "E": E_val,
-        "i": i_val
-    })
-
+    user_data = []
+    for item in outcomes:
+        st.sidebar.subheader(item["label"])
+        E_val = st.sidebar.number_input(
+            f"{item['label']}：リスク差 (E)",
+            value=float(item["default_E"]),
+            step=0.01,
+            format="%.3f"
+        )
+        i_val = st.sidebar.slider(
+            f"{item['label']}：重要度 (0=低,100=高)",
+            min_value=0,
+            max_value=100,
+            value=item["default_i"],
+            step=1
+        )
+        user_data.append({
+            "label": item["label"],
+            "f": item["f"],
+            "E": E_val,
+            "i": i_val,
+        })
     
     st.sidebar.header("② 制約（Constraints）")
     constraint_options = ["問題なし", "やや問題", "重視する"]
