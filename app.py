@@ -66,19 +66,20 @@ def star_html_5(net_effect):
 
 def show_results(user_data, cost_val, access_val, care_val):
     st.subheader("正味の益（Net Benefit）計算結果")
-    total_i = sum(d.get("i", 0) for d in user_data)
+    total_i = sum(d["i"] for d in user_data)
     if total_i == 0:
         st.error("重要度がすべて0のため計算できません。少なくとも1つは重要度を上げてください。")
         return
 
     net_sum_s = 0.0
     net_sum_r = 0.0
+
     st.markdown("### 各アウトカムの詳細 (効果推定値s & 効果推定値r)")
     for d in user_data:
-        label = d.get("label", "")
-        E_val = d.get("E", 0)
-        i_val = d.get("i", 0)
-        f_val = d.get("f", 1)
+        label = d["label"]
+        E_val = d["E"]
+        i_val = d["i"]
+        f_val = d["f"]
         # Sheet2 calculation
         w_s = i_val / total_i
         nb_s = E_val * w_s * f_val
@@ -96,27 +97,25 @@ def show_results(user_data, cost_val, access_val, care_val):
             unsafe_allow_html=True
         )
 
+    # Final net sums
     st.markdown("### 合計正味の益")
-    s_1000 = int(round(net_sum_s * 1000))
-    r_1000 = int(round(net_sum_r * 1000))
-    def render_sum(label_name, net_val, count_per_1000):
-        if net_val > 0:
-            border = "red"
-            direction = "有害方向（プラス）"
-        else:
-            border = "green"
-            direction = "有益方向（マイナス）"
-        html = (
-            f"<div style='border:2px solid {border}; border-radius:4px; padding:12px; margin-bottom:8px;'>"
-            f"<strong>{label_name} 全体として{direction}の可能性。</strong><br>"
-            f"Net=1000人あたり={count_per_1000}人"
-            f"</div>"
-        )
-        st.markdown(html, unsafe_allow_html=True)
+    s_1000 = int(round(net_sum_s * 1000, 0))
+    r_1000 = int(round(net_sum_r * 1000, 0))
+    if net_sum_s > 0:
+        st.error(f"効果推定値s 全体として有害方向になる可能性があります（プラス）。\nNet=1000人あたり={s_1000}人")
+    elif abs(net_sum_s) < 1e-9:
+        st.info(f"効果推定値s 全体としてほぼ変化なし（ニュートラル）の可能性。\nNet=1000人あたり={s_1000}人")
+    else:
+        st.success(f"効果推定値s 全体として有益方向になる可能性があります（マイナス）。\nNet=1000人あたり={s_1000}人")
 
-    render_sum("効果推定値s", net_sum_s, s_1000)
-    render_sum("効果推定値r", net_sum_r, r_1000)
+    if net_sum_r > 0:
+        st.error(f"効果推定値r 全体として有害方向になる可能性があります（プラス）。\nNet=1000人あたり={r_1000}人")
+    elif abs(net_sum_r) < 1e-9:
+        st.info(f"効果推定値r 全体としてほぼ変化なし（ニュートラル）の可能性。\nNet=1000人あたり={r_1000}人")
+    else:
+        st.success(f"効果推定値r 全体として有益方向になる可能性があります（マイナス）。\nNet=1000人あたり={r_1000}人")
 
+    # Constraints summary
     st.subheader("制約（Constraints）の状況")
     max_sev = max(cost_val, access_val, care_val)
     if max_sev == 0.0:
@@ -132,15 +131,18 @@ def show_results(user_data, cost_val, access_val, care_val):
 
 
 def main():
+    # Profile gating
     if not st.session_state.get("profile_complete", False):
         profile_page()
         return
 
+    # Sidebar user info
     st.sidebar.write("ユーザー情報:")
     st.sidebar.write(f"・年齢 = {st.session_state.age}")
     st.sidebar.write(f"・性別 = {st.session_state.gender}")
     st.sidebar.write(f"・都道府県 = {st.session_state.prefecture}")
 
+    # App title & description
     st.title("正味の益計算：効果推定値s & 効果推定値r + スター表示 + カラー解釈")
     st.markdown(
         """
@@ -153,12 +155,13 @@ def main():
         - <em>効果推定値s</em>：合計重要度で割る（\( i / \sum i \)）<br>
         - <em>効果推定値r</em>：最重要アウトカムを100とした比（\( i / 100 \)）<br>
         - 各アウトカムで2つの貢献度を計算し、それぞれ「net effect」を星表示（正⇒緑、負⇒赤、0⇒灰色ダッシュ）。<br>
-        - 合計の正味の益は、プラスなら赤枠、マイナスなら緑枠で表示。<br>
+        - 合計の正味の益は、プラスなら赤枠、0付近なら青枠、マイナスなら緑枠で表示。<br>
         </p>
         """,
         unsafe_allow_html=True
     )
 
+    # Define static outcomes
     outcomes = [
         {"label": "脳卒中予防", "f": +1, "default_E": 0.10, "default_i": 100},
         {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i": 29},
@@ -167,6 +170,7 @@ def main():
         {"label": "転倒",       "f": -1, "default_E": -0.02, "default_i": 13},
     ]
 
+    # Sidebar inputs: outcomes
     st.sidebar.header("① アウトカムの入力")
     max_extra = 7 - len(outcomes)
     extra_count = st.sidebar.number_input(
@@ -175,6 +179,7 @@ def main():
     )
     user_data = []
 
+    # Static outcomes input
     for item in outcomes:
         E_val = st.sidebar.number_input(
             f"{item['label']}：リスク差 (E)",
@@ -182,28 +187,44 @@ def main():
             key=f"E_{item['label']}"
         )
         i_val = st.sidebar.slider(
-            f"{item['label']}：重要度", 0, 100, item["default_i"], step=1, key=f"i_{item['label']}"
+            f"{item['label']}：重要度",
+            0, 100, item["default_i"], step=1,
+            key=f"i_{item['label']}"
         )
         user_data.append({"label": item["label"], "f": item["f"], "E": E_val, "i": i_val})
 
+    # Custom outcomes input
     for idx in range(extra_count):
         st.sidebar.markdown(f"**Custom Outcome {idx+1}**")
-        label = st.sidebar.text_input("Label", key=f"custom_label_{idx}") or f"Custom{idx+1}"
-        type_choice = st.sidebar.selectbox("Type", ["Benefit", "Side effect"], key=f"custom_type_{idx}")
+        label = st.sidebar.text_input(
+            "Label", key=f"custom_label_{idx}"
+        ) or f"Custom{idx+1}"
+        type_choice = st.sidebar.selectbox(
+            "Type", ["Benefit", "Side effect"], key=f"custom_type_{idx}"
+        )
         f_val = +1 if type_choice == "Benefit" else -1
-        E_val = st.sidebar.number_input(f"{label}：リスク差 (E)", value=0.0, step=0.01, format="%.3f", key=f"custom_E_{idx}")
-        i_val = st.sidebar.slider(f"{label}：重要度", 0, 100, 50, step=1, key=f"custom_i_{idx}")
+        E_val = st.sidebar.number_input(
+            f"{label}：リスク差 (E)", value=0.0, step=0.01, format="%.3f",
+            key=f"custom_E_{idx}"
+        )
+        i_val = st.sidebar.slider(
+            f"{label}：重要度", 0, 100, 50, step=1,
+            key=f"custom_i_{idx}"
+        )
         user_data.append({"label": label, "f": f_val, "E": E_val, "i": i_val})
 
+    # Constraints inputs
     st.sidebar.header("② 制約（Constraints）")
-    options = ["問題なし", "やや問題", "重視する"]
-    cost_label = st.sidebar.radio("費用面の問題", options, index=0)
-    access_label = st.sidebar.radio("通院アクセスの問題", options, index=0)
-    care_label = st.sidebar.radio("介助面の問題", options, index=0)
+    constraint_options = ["問題なし", "やや問題", "重視する"]
+    cost_label = st.sidebar.radio("費用面の問題", constraint_options, index=0)
+    access_label = st.sidebar.radio("通院アクセスの問題", constraint_options, index=0)
+    care_label = st.sidebar.radio("介助面の問題", constraint_options, index=0)
+
     cost_val = constraint_to_numeric(cost_label)
     access_val = constraint_to_numeric(access_label)
     care_val = constraint_to_numeric(care_label)
 
+    # Calculate button
     if st.sidebar.button("正味の益を計算する"):
         show_results(user_data, cost_val, access_val, care_val)
 
