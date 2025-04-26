@@ -203,9 +203,9 @@ def main():
             "Label", key=f"custom_label_{idx}"
         ) or f"Custom{idx+1}"
         type_choice = st.sidebar.selectbox(
-            "Type", ["Benefit", "Side effect"], key=f"custom_type_{idx}"
+            "Type", ["益", "副作用"], key=f"custom_type_{idx}"
         )
-        f_val = +1 if type_choice == "Benefit" else -1
+        f_val = +1 if type_choice == "益" else -1
         E_val = st.sidebar.number_input(
             f"{label}：リスク差 (E)", value=0.0, step=0.01, format="%.3f",
             key=f"custom_E_{idx}"
