@@ -171,13 +171,8 @@ def main():
         {"label": "転倒",       "f": -1, "default_E": -0.02, "default_i": 13},
     ]
 
-    # Sidebar inputs: outcomes
+    # Sidebar inputs: static outcomes
     st.sidebar.header("① アウトカムの入力")
-    max_extra = 7 - len(outcomes)
-    extra_count = st.sidebar.number_input(
-        f"追加アウトカム数 (0–{max_extra})",
-        min_value=0, max_value=max_extra, value=0, step=1
-    )
     user_data = []
 
     # Static outcomes input
@@ -193,6 +188,13 @@ def main():
             key=f"i_{item['label']}"
         )
         user_data.append({"label": item["label"], "f": item["f"], "E": E_val, "i": i_val})
+
+    # ——— Move additional‐outcome selector here ———
+    max_extra = 7 - len(outcomes)
+    extra_count = st.sidebar.number_input(
+        f"追加アウトカム数 (0–{max_extra})",
+        min_value=0, max_value=max_extra, value=0, step=1
+    )
 
     # Custom outcomes input
     for idx in range(extra_count):
