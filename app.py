@@ -67,6 +67,7 @@ def star_html_5(net_effect):
 
 def show_results(user_data, cost_val, access_val, care_val):
     st.subheader("正味の益（Net Benefit）計算結果")
+
     total_i = sum(d["i"] for d in user_data)
     if total_i == 0:
         st.error("重要度がすべて0のため計算できません。少なくとも1つは重要度を上げてください。")
@@ -75,22 +76,45 @@ def show_results(user_data, cost_val, access_val, care_val):
     net_sum_s = 0.0
     net_sum_r = 0.0
 
-    st.markdown("### 各アウトカムの詳細 (効果推定値s & 効果推定値r)")
+    # 日本語ツールチップ文言
+    tooltip_s = (
+        "すべての項目を同じ重みで計算した平均的な効果。"
+        "多くの人が感じる“一般的な”効果イメージです。"
+    )
+    tooltip_r = (
+        "ご自身で重み付けした項目を優先して計算した効果。"
+        "あなた個人の価値観や関心に基づく効果イメージです。"
+    )
+
+    # ホバー可能な❓アイコン付きのヘッダー
+    header_md = (
+        f"### 各アウトカムの詳細 "
+        f"(効果推定値s "
+        f"<span style='text-decoration:underline dotted; cursor:help;' title='{tooltip_s}'>❓</span>"
+        f" & 効果推定値r "
+        f"<span style='text-decoration:underline dotted; cursor:help;' title='{tooltip_r}'>❓</span>)"
+    )
+    st.markdown(header_md, unsafe_allow_html=True)
+
+    # 各アウトカムを表示
     for d in user_data:
         label = d["label"]
         E_val = d["E"]
         i_val = d["i"]
         f_val = d["f"]
+
         # Sheet2 calculation
         w_s = i_val / total_i
         nb_s = E_val * w_s * f_val
         net_sum_s += nb_s
         star_s = star_html_5(nb_s)
+
         # Sheet3 calculation
         w_r = i_val / 100.0
         nb_r = E_val * w_r * f_val
         net_sum_r += nb_r
         star_r = star_html_5(nb_r)
+
         st.markdown(
             f"- **{label}**: E={E_val:.3f}, i={i_val}<br>"
             f"&emsp;**効果推定値s**: {star_s} ( {nb_s:.4f} )  "
@@ -98,10 +122,11 @@ def show_results(user_data, cost_val, access_val, care_val):
             unsafe_allow_html=True
         )
 
-    # Final net sums
+    # 合計正味の益
     st.markdown("### 合計正味の益")
     s_1000 = int(round(net_sum_s * 1000, 0))
     r_1000 = int(round(net_sum_r * 1000, 0))
+
     if net_sum_s > 0:
         st.error(f"効果推定値s 全体として有害方向になる可能性があります（プラス）。\nNet=1000人あたり={s_1000}人")
     elif abs(net_sum_s) < 1e-9:
@@ -137,7 +162,7 @@ def main():
         profile_page()
         return
 
-    # Sidebar user info
+    # Sidebar: user info
     st.sidebar.write("ユーザー情報:")
     st.sidebar.write(f"・年齢 = {st.session_state.age}")
     st.sidebar.write(f"・性別 = {st.session_state.gender}")
@@ -175,7 +200,6 @@ def main():
     st.sidebar.header("① アウトカムの入力")
     user_data = []
 
-    # Static outcomes input
     for item in outcomes:
         E_val = st.sidebar.number_input(
             f"{item['label']}：リスク差 (E)",
@@ -189,23 +213,20 @@ def main():
         )
         user_data.append({"label": item["label"], "f": item["f"], "E": E_val, "i": i_val})
 
-    # ——— Move additional‐outcome selector here ———
+    # ——— Additional outcomes just before Constraints ———
     max_extra = 7 - len(outcomes)
     extra_count = st.sidebar.number_input(
         f"追加アウトカム数 (0–{max_extra})",
         min_value=0, max_value=max_extra, value=0, step=1
     )
 
-    # Custom outcomes input
     for idx in range(extra_count):
         st.sidebar.markdown(f"**Custom Outcome {idx+1}**")
-        label = st.sidebar.text_input(
-            "Label", key=f"custom_label_{idx}"
-        ) or f"Custom{idx+1}"
+        label = st.sidebar.text_input("Label", key=f"custom_label_{idx}") or f"Custom{idx+1}"
         type_choice = st.sidebar.selectbox(
-            "Type", ["益", "副作用"], key=f"custom_type_{idx}"
+            "Type", ["Benefit", "Side effect"], key=f"custom_type_{idx}"
         )
-        f_val = +1 if type_choice == "益" else -1
+        f_val = +1 if type_choice == "Benefit" else -1
         E_val = st.sidebar.number_input(
             f"{label}：リスク差 (E)", value=0.0, step=0.01, format="%.3f",
             key=f"custom_E_{idx}"
