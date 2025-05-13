@@ -123,7 +123,7 @@ def show_results(user_data, cost_val, access_val, care_val):
         )
 
     # 合計正味の益
-    st.markdown("### 合計正味の益")
+    st.markdown("### 正味の益 計算結果")
     s_1000 = int(round(net_sum_s * 1000, 0))
     r_1000 = int(round(net_sum_r * 1000, 0))
 
@@ -142,7 +142,7 @@ def show_results(user_data, cost_val, access_val, care_val):
         st.success(f"効果推定値r 全体として有益方向になる可能性があります（マイナス）。\nNet=1000人あたり={r_1000}人")
 
     # Constraints summary
-    st.subheader("制約（Constraints）の状況")
+    st.subheader("価値観（Value）")
     max_sev = max(cost_val, access_val, care_val)
     if max_sev == 0.0:
         st.success("制約：すべて問題なし（緑）")
@@ -182,18 +182,17 @@ def main():
         - <em>効果推定値r</em>：最重要アウトカムを100とした比（\( i / 100 \)）<br>
         - 各アウトカムで2つの貢献度を計算し、それぞれ「net effect」を星表示（正⇒緑、負⇒赤、0⇒灰色ダッシュ）。<br>
         - 合計の正味の益は、プラスなら赤枠、0付近なら青枠、マイナスなら緑枠で表示。<br>
-        </p>
         """,
         unsafe_allow_html=True
     )
 
-    # Define static outcomes
+    # Define static outcomes with inverted signs: benefits negative, side-effects positive
     outcomes = [
-        {"label": "脳卒中予防", "f": +1, "default_E": 0.10, "default_i": 100},
-        {"label": "心不全予防", "f": +1, "default_E": -0.10, "default_i": 29},
-        {"label": "めまい",     "f": -1, "default_E": 0.02, "default_i": 5},
-        {"label": "頻尿",       "f": -1, "default_E": -0.01, "default_i": 4},
-        {"label": "転倒",       "f": -1, "default_E": -0.02, "default_i": 13},
+        {"label": "脳卒中予防", "f": -1, "default_E": 0.10,  "default_i": 100},
+        {"label": "心不全予防", "f": -1, "default_E": -0.10, "default_i": 29},
+        {"label": "めまい",     "f": +1, "default_E": 0.02,  "default_i": 5},
+        {"label": "頻尿",       "f": +1, "default_E": -0.01, "default_i": 4},
+        {"label": "転倒",       "f": +1, "default_E": -0.02, "default_i": 13},
     ]
 
     # Sidebar inputs: static outcomes
@@ -226,7 +225,8 @@ def main():
         type_choice = st.sidebar.selectbox(
             "Type", ["Benefit", "Side effect"], key=f"custom_type_{idx}"
         )
-        f_val = +1 if type_choice == "Benefit" else -1
+        # invert sign: Benefit -> -1, Side effect -> +1
+        f_val = -1 if type_choice == "Benefit" else +1
         E_val = st.sidebar.number_input(
             f"{label}：リスク差 (E)", value=0.0, step=0.01, format="%.3f",
             key=f"custom_E_{idx}"
@@ -238,8 +238,8 @@ def main():
         user_data.append({"label": label, "f": f_val, "E": E_val, "i": i_val})
 
     # Constraints inputs
-    st.sidebar.header("② 制約（Constraints）")
-    constraint_options = ["問題なし", "やや問題", "重視する"]
+    st.sidebar.header("② 価値観（Value）")
+    constraint_options = ["問題なし", "懸念あり", "重大"]
     cost_label = st.sidebar.radio("費用面の問題", constraint_options, index=0)
     access_label = st.sidebar.radio("通院アクセスの問題", constraint_options, index=0)
     care_label = st.sidebar.radio("介助面の問題", constraint_options, index=0)
