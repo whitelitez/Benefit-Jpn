@@ -26,7 +26,7 @@ def profile_page():
 def constraint_to_numeric(label):
     if label == "問題なし":
         return 0.0
-    elif label == "やや問題":
+    elif label == "懸念あり":
         return 0.5
     else:
         return 1.0
@@ -36,9 +36,9 @@ def numeric_to_constraint_label(value):
     if value == 0.0:
         return "問題なし"
     elif value == 0.5:
-        return "やや問題"
+        return "懸念あり"
     else:
-        return "重視する"
+        return "重大"
 
 
 def star_html_5(net_effect):
